@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, FONT_SIZES, FONT_WEIGHTS } from "../theme/theme";
 
@@ -14,9 +14,8 @@ const RoleSelector = ({ selectedRole, onRoleChange }) => {
       {ROLES.map((role) => {
         const isSelected = selectedRole === role.key;
         return (
-          <TouchableOpacity
+          <Pressable
             key={role.key}
-            activeOpacity={0.7}
             onPress={() => onRoleChange(role.key)}
             style={[
               styles.roleBtn,
@@ -25,11 +24,15 @@ const RoleSelector = ({ selectedRole, onRoleChange }) => {
                 : styles.unselectedBtn,
               isSelected && SHADOWS.light,
             ]}
+            accessibilityRole="button"
+            accessibilityLabel={`${role.key} role`}
+            accessibilityHint={`Select ${role.key} to ${role.subtitle.toLowerCase()}`}
           >
             <View style={[styles.iconCircle, { backgroundColor: isSelected ? role.color + "20" : COLORS.background }]}>
               <Feather name={role.icon} size={22} color={isSelected ? role.color : COLORS.textSecondary} />
             </View>
             <Text
+              allowFontScaling={true}
               style={[
                 styles.roleText,
                 isSelected ? { color: role.color } : styles.unselectedText,
@@ -37,8 +40,8 @@ const RoleSelector = ({ selectedRole, onRoleChange }) => {
             >
               {role.key}
             </Text>
-            <Text style={styles.subtitle}>{role.subtitle}</Text>
-          </TouchableOpacity>
+            <Text allowFontScaling={true} style={styles.subtitle}>{role.subtitle}</Text>
+          </Pressable>
         );
       })}
     </View>
@@ -55,8 +58,10 @@ const styles = StyleSheet.create({
   roleBtn: {
     flex: 0.48,
     paddingVertical: SPACING.lg,
+    minHeight: 84,
     borderRadius: BORDER_RADIUS.lg,
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1.5,
   },
   selectedBtn: {

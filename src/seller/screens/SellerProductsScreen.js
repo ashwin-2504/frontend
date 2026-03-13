@@ -7,6 +7,8 @@ import ProductItem from "../components/ProductItem";
 import apiService from "../../shared/services/apiService";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../shared/context/AuthContext";
+import { TopBar } from "../../shared/components/ScreenActions";
+import { announceMessage } from "../../shared/utils/accessibility";
 
 const SellerProductsScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -27,6 +29,7 @@ const SellerProductsScreen = ({ navigation }) => {
       setProducts(data);
     } catch (error) {
       console.error("Failed to fetch seller products:", error);
+      announceMessage("Could not load products. Please retry.");
     } finally {
       setLoading(false);
     }
@@ -76,15 +79,21 @@ const SellerProductsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Products</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("AddProduct")} style={styles.headerAction}>
-          <Feather name="plus" size={24} color={COLORS.primary} />
-        </TouchableOpacity>
-      </View>
+      <TopBar
+        title="My Products"
+        onBack={() => navigation.goBack()}
+        rightNode={
+          <TouchableOpacity
+            onPress={() => navigation.navigate("AddProduct")}
+            style={styles.headerAction}
+            accessibilityRole="button"
+            accessibilityLabel="Add product"
+            accessibilityHint="Open add product form"
+          >
+            <Feather name="plus-circle" size={24} color={COLORS.primary} />
+          </TouchableOpacity>
+        }
+      />
 
       {renderContent()}
     </SafeAreaView>

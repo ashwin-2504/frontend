@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from "react-native";
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS } from "../../shared/theme/theme";
 import StatsCard from "../../shared/components/StatsCard";
@@ -9,6 +9,8 @@ import OrderItem from "../../seller/components/OrderItem";
 import ProductItem from "../../seller/components/ProductItem";
 import apiService from "../../shared/services/apiService";
 import { useAuth } from "../../shared/context/AuthContext";
+import { TopBar } from "../../shared/components/ScreenActions";
+import { announceMessage } from "../../shared/utils/accessibility";
 
 const BuyerDashboard = ({ navigation }) => {
   const { user } = useAuth();
@@ -35,7 +37,7 @@ const BuyerDashboard = ({ navigation }) => {
       const [statsData, ordersData, feedData] = await Promise.all([
         apiService.getBuyerStats(buyerId),
         apiService.getBuyerOrders(buyerId),
-        apiService.getProductFeed(5)
+        apiService.getProductFeed(3)
       ]);
       
       setStats({
@@ -48,6 +50,7 @@ const BuyerDashboard = ({ navigation }) => {
       setFeed(feedData);
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
+      announceMessage("Could not load dashboard. Pull down to try again.");
     } finally {
       setLoading(false);
     }
@@ -59,28 +62,35 @@ const BuyerDashboard = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Feather name="shopping-bag" size={24} color={COLORS.primary} style={styles.logoIcon} />
-          <Text style={styles.logoText}>BharatMandi</Text>
-        </View>
-        <TouchableOpacity 
-          style={styles.iconButton}
-          onPress={() => Alert.alert(
-            "Logout",
-            "Are you sure you want to logout?",
-            [
-              { text: "Cancel", style: "cancel" },
-              { text: "Logout", style: "destructive", onPress: () => navigation.reset({
-                index: 0,
-                routes: [{ name: "Login" }],
-              }) }
-            ]
-          )}
-        >
-          <Feather name="log-out" size={20} color={COLORS.textSecondary} />
-        </TouchableOpacity>
-      </View>
+      <TopBar
+        title="Buyer Dashboard"
+        onBack={() => navigation.navigate("Login")}
+        backHint="Return to login screen"
+        rightNode={
+          <Pressable
+            style={styles.iconButton}
+            onPress={() =>
+              Alert.alert("Logout", "Are you sure you want to logout?", [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Logout",
+                  style: "destructive",
+                  onPress: () =>
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: "Login" }],
+                    }),
+                },
+              ])
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Logout"
+            accessibilityHint="Sign out and return to login"
+          >
+            <Feather name="log-out" size={20} color={COLORS.textSecondary} />
+          </Pressable>
+        }
+      />
 
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -101,23 +111,44 @@ const BuyerDashboard = ({ navigation }) => {
               <Feather name="shopping-cart" size={24} color={COLORS.white} />
             </View>
             <View>
-              <Text style={styles.welcomeTitle}>Buyer Dashboard</Text>
-              <Text style={styles.welcomeSubtitle}>Browse and buy agricultural products</Text>
+              <Text allowFontScaling={true} style={styles.welcomeTitle}>Buyer Dashboard</Text>
+              <Text allowFontScaling={true} style={styles.welcomeSubtitle}>Browse and buy agricultural products</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.statsGrid}>
-          <StatsCard title="Total Purchases" value={stats.purchases} icon="shopping-bag" color={{ bg: "#F3E5F5", icon: "#7B1FA2" }} />
-          <StatsCard title="Active Orders" value={stats.orders} icon="truck" color={{ bg: "#E3F2FD", icon: "#1565C0" }} />
+          <StatsCard
+            title="Total Purchases"
+            value={stats.purchases}
+            icon="shopping-bag"
+            color={{ bg: "#F3E5F5", icon: "#7B1FA2" }}
+            onPress={() => navigation.navigate("BuyerPurchases")}
+            accessibilityHint="Open your full purchases history"
+          />
+          <StatsCard
+            title="Active Orders"
+            value={stats.orders}
+            icon="truck"
+            color={{ bg: "#E3F2FD", icon: "#1565C0" }}
+            onPress={() => navigation.navigate("BuyerActiveOrders")}
+            accessibilityHint="Open currently active orders"
+          />
           <StatsCard title="Total Spent" value={stats.spent} icon="credit-card" color={{ bg: "#E8F5E9", icon: "#2E7D32" }} />
-          <StatsCard title="Wishlist Items" value={stats.wishlist} icon="heart" color={{ bg: "#FFEBEE", icon: "#C62828" }} />
+          <StatsCard
+            title="Wishlist Items"
+            value={stats.wishlist}
+            icon="heart"
+            color={{ bg: "#FFEBEE", icon: "#C62828" }}
+            onPress={() => navigation.navigate("Marketplace")}
+            accessibilityHint="Open marketplace to add items"
+          />
         </View>
 
         <View style={styles.sectionHeader}>
           <View style={styles.titleWithIcon}>
             <Feather name="award" size={18} color={COLORS.primary} style={styles.sectionIcon} />
-            <Text style={styles.sectionTitle}>Recommended For You</Text>
+            <Text allowFontScaling={true} style={styles.sectionTitle}>Recommended For You</Text>
           </View>
           <TouchableOpacity 
             style={styles.addButton}
@@ -148,7 +179,7 @@ const BuyerDashboard = ({ navigation }) => {
         <View style={styles.sectionHeader}>
           <View style={styles.titleWithIcon}>
             <Feather name="shopping-bag" size={18} color={COLORS.primary} style={styles.sectionIcon} />
-            <Text style={styles.sectionTitle}>My Recent Orders ({recentOrders.length})</Text>
+            <Text allowFontScaling={true} style={styles.sectionTitle}>My Recent Orders ({recentOrders.length})</Text>
           </View>
         </View>
 
@@ -158,7 +189,7 @@ const BuyerDashboard = ({ navigation }) => {
           </View>
         ) : (
           <View style={styles.orderList}>
-            {recentOrders.slice(0, 5).map(order => (
+            {recentOrders.slice(0, 4).map(order => (
               <OrderItem key={order.id} order={order} onPress={() => navigation.navigate("BuyerOrderDetail", { order })} />
             ))}
           </View>

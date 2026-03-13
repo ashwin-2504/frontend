@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, STATUS_COLORS, FONT_SIZES, FONT_WEIGHTS } from "../../shared/theme/theme";
+import { TopBar } from "../../shared/components/ScreenActions";
 
 const BuyerOrderDetailScreen = ({ route, navigation }) => {
   const { order } = route.params;
@@ -26,21 +27,15 @@ const BuyerOrderDetailScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Details</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <TopBar title="Order Details" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Order summary card */}
         <View style={styles.card}>
           <View style={styles.orderHeader}>
-            <Text style={styles.orderId}>Order #{order.id?.substring(0, 8)}</Text>
+            <Text allowFontScaling={true} style={styles.orderId}>Order #{order.id?.substring(0, 8)}</Text>
             <View style={[styles.statusBadge, { backgroundColor: getStatusBg(order.status) }]}>
-              <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
+              <Text allowFontScaling={true} style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
             </View>
           </View>
 
@@ -61,7 +56,7 @@ const BuyerOrderDetailScreen = ({ route, navigation }) => {
         {/* Items list */}
         {orderItems.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Items</Text>
+          <Text allowFontScaling={true} style={styles.sectionTitle}>Items</Text>
             <View style={styles.card}>
               {orderItems.map((item, index) => (
                 <View key={item.id || index} style={[styles.itemRow, index < orderItems.length - 1 && styles.itemBorder]}>
@@ -69,10 +64,10 @@ const BuyerOrderDetailScreen = ({ route, navigation }) => {
                     <Feather name="box" size={18} color={COLORS.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.itemName}>{item.name || "Product"}</Text>
-                    <Text style={styles.itemMeta}>Qty: {item.quantity || 1} × ₹{item.price || 0}</Text>
+                    <Text allowFontScaling={true} style={styles.itemName}>{item.name || "Product"}</Text>
+                    <Text allowFontScaling={true} style={styles.itemMeta}>Qty: {item.quantity || 1} × ₹{item.price || 0}</Text>
                   </View>
-                  <Text style={styles.itemTotal}>₹{(item.price || 0) * (item.quantity || 1)}</Text>
+                  <Text allowFontScaling={true} style={styles.itemTotal}>₹{(item.price || 0) * (item.quantity || 1)}</Text>
                 </View>
               ))}
             </View>
@@ -80,20 +75,20 @@ const BuyerOrderDetailScreen = ({ route, navigation }) => {
         )}
 
         {/* Status timeline (simple) */}
-        <Text style={styles.sectionTitle}>Order Status</Text>
+        <Text allowFontScaling={true} style={styles.sectionTitle}>Order Status</Text>
         <View style={styles.card}>
             <View style={[styles.timelineRow, { flexDirection: "row", alignItems: "center" }]}>
               <View style={[styles.timelineDot, { backgroundColor: '#4CAF50' }]}>
                 <Feather name="check" size={8} color="#fff" />
               </View>
-              <Text style={styles.timelineText}>Order Placed</Text>
+              <Text allowFontScaling={true} style={styles.timelineText}>Order Placed</Text>
             </View>
             {(order.status === 'SHIPPED' || order.status === 'DELIVERED') && (
               <View style={styles.timelineRow}>
                 <View style={[styles.timelineDot, { backgroundColor: '#2196F3' }]}>
                   <Feather name="truck" size={8} color="#fff" />
                 </View>
-                <Text style={styles.timelineText}>Shipped</Text>
+                <Text allowFontScaling={true} style={styles.timelineText}>Shipped</Text>
               </View>
             )}
             {order.status === 'DELIVERED' && (
@@ -101,7 +96,7 @@ const BuyerOrderDetailScreen = ({ route, navigation }) => {
                 <View style={[styles.timelineDot, { backgroundColor: '#4CAF50' }]}>
                   <Feather name="check-circle" size={8} color="#fff" />
                 </View>
-                <Text style={styles.timelineText}>Delivered</Text>
+                <Text allowFontScaling={true} style={styles.timelineText}>Delivered</Text>
               </View>
             )}
             {order.status === 'CANCELLED' && (
@@ -109,7 +104,7 @@ const BuyerOrderDetailScreen = ({ route, navigation }) => {
                 <View style={[styles.timelineDot, { backgroundColor: '#F44336' }]}>
                   <Feather name="x" size={8} color="#fff" />
                 </View>
-                <Text style={styles.timelineText}>Cancelled</Text>
+                <Text allowFontScaling={true} style={styles.timelineText}>Cancelled</Text>
               </View>
             )}
         </View>

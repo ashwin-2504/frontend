@@ -18,11 +18,15 @@ import * as ImagePicker from "expo-image-picker";
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS } from "../../shared/theme/theme";
 import apiService from "../../shared/services/apiService";
 import { useAuth } from "../../shared/context/AuthContext";
+import { BottomNextBar, TopBar } from "../../shared/components/ScreenActions";
+import ErrorBanner from "../../shared/components/ErrorBanner";
+import { announceMessage } from "../../shared/utils/accessibility";
 
 const EditProductScreen = ({ route, navigation }) => {
   const { product } = route.params;
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [formData, setFormData] = useState({
     name: product.name || "",
     description: product.description || "",
@@ -46,6 +50,7 @@ const EditProductScreen = ({ route, navigation }) => {
 
     if (!result.canceled) {
       handleChange("image_url", result.assets[0].uri);
+      setErrorMessage("");
     }
   };
 
@@ -53,7 +58,10 @@ const EditProductScreen = ({ route, navigation }) => {
     const { name, price, category, stock_quantity } = formData;
 
     if (!name || !price || !category || !stock_quantity) {
-      Alert.alert("Error", "Please fill in all required fields");
+      const message = "Please fill all required fields before saving.";
+      setErrorMessage(message);
+      announceMessage(message);
+      Alert.alert("Error", message);
       return;
     }
 
@@ -67,11 +75,16 @@ const EditProductScreen = ({ route, navigation }) => {
       };
 
       await apiService.updateProduct(product.id, payload);
+      setErrorMessage("");
+      announceMessage("Product updated successfully");
       Alert.alert("Success", "Product updated!", [
         { text: "OK", onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
       console.error("Failed to update product:", error);
+      const message = "Could not update product. Please retry.";
+      setErrorMessage(message);
+      announceMessage(message);
       Alert.alert("Error", "Failed to update product.");
     } finally {
       setLoading(false);
@@ -91,11 +104,13 @@ const EditProductScreen = ({ route, navigation }) => {
             setLoading(true);
             try {
               await apiService.deleteProduct(product.id, user?.id || "seller_123");
+              announceMessage("Product deleted");
               Alert.alert("Deleted", "Product has been removed.", [
                 { text: "OK", onPress: () => navigation.goBack() },
               ]);
             } catch (error) {
               console.error("Failed to delete product:", error);
+              announceMessage("Could not delete product");
               Alert.alert("Error", "Failed to delete product.");
             } finally {
               setLoading(false);
@@ -112,32 +127,33 @@ const EditProductScreen = ({ route, navigation }) => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.flex}
       >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Product</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <TopBar title="Edit Product" onBack={() => navigation.goBack()} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <ErrorBanner message={errorMessage} />
           {/* Image picker */}
-          <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+          <TouchableOpacity
+            style={styles.imagePicker}
+            onPress={pickImage}
+            accessibilityRole="button"
+            accessibilityLabel="Change product image"
+            accessibilityHint="Open image library to update photo"
+          >
             {formData.image_url ? (
               <Image source={{ uri: formData.image_url }} style={styles.image} />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Feather name="camera" size={32} color={COLORS.textSecondary} />
-                <Text style={styles.imageText}>Tap to change image</Text>
+                <Text allowFontScaling={true} style={styles.imageText}>Tap to change image</Text>
               </View>
             )}
           </TouchableOpacity>
 
           {/* Form fields */}
-          <Text style={styles.label}>Product Name *</Text>
+          <Text allowFontScaling={true} style={styles.label}>Product Name *</Text>
           <TextInput
             style={styles.input}
             value={formData.name}
@@ -146,7 +162,7 @@ const EditProductScreen = ({ route, navigation }) => {
             placeholderTextColor={COLORS.textSecondary}
           />
 
-          <Text style={styles.label}>Description</Text>
+          <Text allowFontScaling={true} style={styles.label}>Description</Text>
           <TextInput
             style={[styles.input, styles.multiline]}
             value={formData.description}
@@ -159,7 +175,7 @@ const EditProductScreen = ({ route, navigation }) => {
 
           <View style={styles.row}>
             <View style={styles.halfField}>
-              <Text style={styles.label}>Price (₹) *</Text>
+              <Text allowFontScaling={true} style={styles.label}>Price (₹) *</Text>
               <TextInput
                 style={styles.input}
                 value={formData.price}
@@ -170,7 +186,7 @@ const EditProductScreen = ({ route, navigation }) => {
               />
             </View>
             <View style={styles.halfField}>
-              <Text style={styles.label}>Stock *</Text>
+              <Text allowFontScaling={true} style={styles.label}>Stock *</Text>
               <TextInput
                 style={styles.input}
                 value={formData.stock_quantity}
@@ -182,7 +198,7 @@ const EditProductScreen = ({ route, navigation }) => {
             </View>
           </View>
 
-          <Text style={styles.label}>Category *</Text>
+          <Text allowFontScaling={true} style={styles.label}>Category *</Text>
           <TextInput
             style={styles.input}
             value={formData.category}
@@ -211,11 +227,20 @@ const EditProductScreen = ({ route, navigation }) => {
             onPress={handleDelete}
             disabled={loading}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Delete product"
+            accessibilityHint="Removes this product permanently"
           >
             <Feather name="trash-2" size={18} color={COLORS.error} />
-            <Text style={styles.deleteButtonText}>Delete Product</Text>
+            <Text allowFontScaling={true} style={styles.deleteButtonText}>Delete Product</Text>
           </TouchableOpacity>
         </ScrollView>
+        <BottomNextBar
+          label={loading ? "Saving..." : "Next: Save Changes"}
+          onPress={handleSave}
+          disabled={loading}
+          accessibilityHint="Saves product changes"
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

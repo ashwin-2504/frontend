@@ -4,6 +4,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, STATUS_COLORS, FONT_SIZES, FONT_WEIGHTS } from "../../shared/theme/theme";
 import apiService from "../../shared/services/apiService";
+import { TopBar } from "../../shared/components/ScreenActions";
+import ErrorBanner from "../../shared/components/ErrorBanner";
+import { announceMessage } from "../../shared/utils/accessibility";
 
 const STATUS_CHOICES = ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"];
 
@@ -11,6 +14,7 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
   const { order: initialOrder } = route.params;
   const [order, setOrder] = useState(initialOrder);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleStatusUpdate = async (newStatus) => {
     if (newStatus === order.status) return;
@@ -27,9 +31,14 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
               setLoading(true);
               const updatedOrder = await apiService.updateOrderStatus(order.id, newStatus);
               setOrder({ ...order, status: updatedOrder.status || newStatus });
+              setErrorMessage("");
+              announceMessage(`Order status changed to ${newStatus}`);
               Alert.alert("Success", "Order status updated successfully!");
             } catch (error) {
               console.error("Failed to update status", error);
+              const message = "Could not update order status. Please retry.";
+              setErrorMessage(message);
+              announceMessage(message);
               Alert.alert("Error", "Could not update order status.");
             } finally {
               setLoading(false);
@@ -52,20 +61,15 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Details</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <TopBar title="Order Details" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ErrorBanner message={errorMessage} />
         <View style={styles.card}>
           <View style={styles.orderHeader}>
-            <Text style={styles.orderId}>Order #{order.id.substring(0, 8)}</Text>
+            <Text allowFontScaling={true} style={styles.orderId}>Order #{order.id.substring(0, 8)}</Text>
             <View style={[styles.statusBadge, { backgroundColor: getStatusBg(order.status) }]}>
-              <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
+              <Text allowFontScaling={true} style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
             </View>
           </View>
           
@@ -83,7 +87,7 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Update Status</Text>
+        <Text allowFontScaling={true} style={styles.sectionTitle}>Update Status</Text>
         <View style={styles.statusActions}>
           {STATUS_CHOICES.map((status) => (
             <TouchableOpacity 
@@ -95,6 +99,9 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
               ]}
               onPress={() => handleStatusUpdate(status)}
               disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel={`Mark as ${status}`}
+              accessibilityHint="Updates order status"
             >
               {loading && order.status !== status ? (
                 <View style={styles.loadingPlaceholder} />
@@ -113,9 +120,9 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
         {loading && <ActivityIndicator style={{ marginTop: SPACING.md }} color={COLORS.primary} />}
 
         <View style={styles.itemsSection}>
-           <Text style={styles.sectionTitle}>Order Information</Text>
+           <Text allowFontScaling={true} style={styles.sectionTitle}>Order Information</Text>
            <View style={styles.card}>
-             <Text style={styles.infoText}>Further items and delivery details could be displayed here depending on backend schema expansions.</Text>
+             <Text allowFontScaling={true} style={styles.infoText}>Further items and delivery details could be displayed here depending on backend schema expansions.</Text>
            </View>
         </View>
 

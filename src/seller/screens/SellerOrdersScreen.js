@@ -7,6 +7,8 @@ import OrderItem from "../components/OrderItem";
 import apiService from "../../shared/services/apiService";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../shared/context/AuthContext";
+import { TopBar } from "../../shared/components/ScreenActions";
+import { announceMessage } from "../../shared/utils/accessibility";
 
 const SellerOrdersScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -27,6 +29,7 @@ const SellerOrdersScreen = ({ navigation }) => {
       setOrders(data);
     } catch (error) {
       console.error("Failed to fetch seller orders:", error);
+      announceMessage("Could not load orders. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -68,13 +71,7 @@ const SellerOrdersScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>All Orders</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <TopBar title="All Orders" onBack={() => navigation.goBack()} />
 
       {renderContent()}
     </SafeAreaView>

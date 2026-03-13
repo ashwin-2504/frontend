@@ -2,10 +2,23 @@ import React from "react";
 import { View, TextInput, StyleSheet, Text } from "react-native";
 import { COLORS, SPACING, BORDER_RADIUS } from "../theme/theme";
 
-const CustomInput = ({ label, placeholder, secureTextEntry, value, onChangeText, style, ...props }) => {
+const CustomInput = ({
+  label,
+  placeholder,
+  secureTextEntry,
+  value,
+  onChangeText,
+  style,
+  accessibilityHint,
+  ...props
+}) => {
   return (
-    <View style={[styles.container, style]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+    <View style={[styles.container, style]} accessible={true}>
+      {label && (
+        <Text allowFontScaling={true} style={styles.label}>
+          {label}
+        </Text>
+      )}
       <TextInput
         placeholder={placeholder}
         placeholderTextColor={COLORS.textSecondary}
@@ -13,6 +26,9 @@ const CustomInput = ({ label, placeholder, secureTextEntry, value, onChangeText,
         value={value}
         onChangeText={onChangeText}
         style={styles.input}
+        accessibilityLabel={label || placeholder}
+        accessibilityHint={accessibilityHint}
+        allowFontScaling={true}
         {...props}
       />
     </View>
@@ -37,6 +53,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
+    minHeight: 52,
     fontSize: 16,
     color: COLORS.textPrimary,
   },

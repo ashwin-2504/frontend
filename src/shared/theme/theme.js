@@ -1,19 +1,19 @@
 export const COLORS = {
-  primary: "#2E7D32",       // Deep Green
-  primaryLight: "#E8F5E9",
-  primaryDark: "#1B5E20",
-  secondary: "#81C784",
-  background: "#F9FAF9",
-  surface: "#F4F8F5",       // Subtle alternating section bg
+  primary: "#1F6B4A",
+  primaryLight: "#E5F3EC",
+  primaryDark: "#144731",
+  secondary: "#5EA889",
+  background: "#F3F6F4",
+  surface: "#EAF1ED",
   white: "#FFFFFF",
-  textPrimary: "#1B1B1B",
-  textSecondary: "#666666",
-  border: "#E0E0E0",
-  error: "#D32F2F",
-  success: "#4CAF50",
-  warning: "#FF9800",
-  accent: "#FFB300",        // Gold — for highlights, badges, CTAs
-  info: "#2196F3",
+  textPrimary: "#1A1F1C",
+  textSecondary: "#4E5B55",
+  border: "#D3DED7",
+  error: "#B3261E",
+  success: "#2E7D32",
+  warning: "#A86500",
+  accent: "#C98A18",
+  info: "#1C6EB6",
 };
 
 export const STATUS_COLORS = {
@@ -57,27 +57,27 @@ export const SPACING = {
 };
 
 export const BORDER_RADIUS = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  sm: 10,
+  md: 14,
+  lg: 20,
+  xl: 26,
   full: 999,
 };
 
 export const SHADOWS = {
   light: {
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 1,
   },
   medium: {
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.09,
+    shadowRadius: 10,
+    elevation: 3,
   },
   strong: {
     shadowColor: "#000",

@@ -4,6 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS } from "../../shared/theme/theme";
 import { useCart } from "../../shared/context/CartContext";
+import { TopBar } from "../../shared/components/ScreenActions";
+import { announceMessage } from "../../shared/utils/accessibility";
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { product } = route.params;
@@ -17,27 +19,34 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
+    announceMessage(`${quantity} ${product.name} added to cart`);
     Alert.alert("Added to Cart", `${quantity} × ${product.name} added to your cart.`);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Product Details</Text>
-        <TouchableOpacity style={styles.cartButton} onPress={() => navigation.navigate("Cart")}>
-          <View>
-            <Feather name="shopping-cart" size={22} color={COLORS.textPrimary} />
-            {cartCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{cartCount}</Text>
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
-      </View>
+      <TopBar
+        title="Product Details"
+        onBack={() => navigation.goBack()}
+        rightNode={
+          <TouchableOpacity
+            style={styles.cartButton}
+            onPress={() => navigation.navigate("Cart")}
+            accessibilityRole="button"
+            accessibilityLabel={`Open cart, ${cartCount} item${cartCount === 1 ? "" : "s"}`}
+            accessibilityHint="Opens your shopping cart"
+          >
+            <View>
+              <Feather name="shopping-cart" size={22} color={COLORS.textPrimary} />
+              {cartCount > 0 && (
+                <View style={styles.badge}>
+                  <Text allowFontScaling={true} style={styles.badgeText}>{cartCount}</Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.imageContainer}>
@@ -53,27 +62,33 @@ const ProductDetailScreen = ({ route, navigation }) => {
         <View style={styles.detailsSection}>
           <View style={styles.titleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.name}>{product.name}</Text>
-              <Text style={styles.category}>{product.category}</Text>
+              <Text allowFontScaling={true} style={styles.name}>{product.name}</Text>
+              <Text allowFontScaling={true} style={styles.category}>{product.category}</Text>
             </View>
             <View style={styles.priceBadge}>
-              <Text style={styles.price}>₹{product.price}</Text>
+              <Text allowFontScaling={true} style={styles.price}>₹{product.price}</Text>
             </View>
           </View>
 
           <View style={styles.quantitySection}>
-            <Text style={styles.quantityLabel}>Quantity:</Text>
+            <Text allowFontScaling={true} style={styles.quantityLabel}>Quantity:</Text>
             <View style={styles.quantityControls}>
               <TouchableOpacity 
                 style={styles.qtyBtn} 
                 onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                accessibilityRole="button"
+                accessibilityLabel="Decrease quantity"
+                accessibilityHint="Reduces the quantity by one"
               >
                 <Feather name="minus" size={20} color={COLORS.textPrimary} />
               </TouchableOpacity>
-              <Text style={styles.qtyText}>{quantity}</Text>
+              <Text allowFontScaling={true} style={styles.qtyText}>{quantity}</Text>
               <TouchableOpacity 
                 style={styles.qtyBtn} 
                 onPress={() => setQuantity(Math.min(product.stock_quantity, quantity + 1))}
+                accessibilityRole="button"
+                accessibilityLabel="Increase quantity"
+                accessibilityHint="Increases the quantity by one"
               >
                 <Feather name="plus" size={20} color={COLORS.textPrimary} />
               </TouchableOpacity>
@@ -84,8 +99,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
             <View style={styles.infoItem}>
               <Feather name="box" size={18} color={COLORS.primary} />
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Stock Status</Text>
-                <Text style={[styles.infoValue, product.stock_quantity < 10 && styles.lowStock]}>
+                <Text allowFontScaling={true} style={styles.infoLabel}>Stock Status</Text>
+                <Text allowFontScaling={true} style={[styles.infoValue, product.stock_quantity < 10 && styles.lowStock]}>
                   {product.stock_quantity > 0 ? `${product.stock_quantity} available` : "Out of Stock"}
                 </Text>
               </View>
@@ -93,15 +108,15 @@ const ProductDetailScreen = ({ route, navigation }) => {
             <View style={styles.infoItem}>
               <Feather name="user" size={18} color={COLORS.primary} />
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Seller</Text>
-                <Text style={styles.infoValue}>{product.seller_id?.substring(0, 8)}…</Text>
+                <Text allowFontScaling={true} style={styles.infoLabel}>Seller</Text>
+                <Text allowFontScaling={true} style={styles.infoValue}>{product.seller_id?.substring(0, 8)}…</Text>
               </View>
             </View>
           </View>
 
           <View style={styles.descriptionContainer}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>
+            <Text allowFontScaling={true} style={styles.sectionTitle}>Description</Text>
+            <Text allowFontScaling={true} style={styles.description}>
               {product.description || "No description provided for this product. High-quality agricultural produce directly from the source."}
             </Text>
           </View>
@@ -109,13 +124,28 @@ const ProductDetailScreen = ({ route, navigation }) => {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.addToCartButton}
+          onPress={handleAddToCart}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Add to cart"
+          accessibilityHint="This will save this product to your cart"
+        >
           <Feather name="shopping-cart" size={18} color={COLORS.primary} />
-          <Text style={styles.addToCartText}>Add to Cart</Text>
+          <Text allowFontScaling={true} style={styles.addToCartText}>Add to Cart</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.buyButton} onPress={handleBuyNow} activeOpacity={0.8}>
-          <Text style={styles.buyButtonText}>Buy Now</Text>
-          <Feather name="arrow-right" size={18} color={COLORS.white} />
+        <TouchableOpacity
+          style={[styles.addToCartButton, styles.buyNowButton]}
+          onPress={handleBuyNow}
+          activeOpacity={0.8}
+          disabled={product.stock_quantity <= 0}
+          accessibilityRole="button"
+          accessibilityLabel="Buy now"
+          accessibilityHint="Go directly to checkout"
+        >
+          <Feather name="arrow-right-circle" size={18} color={COLORS.white} />
+          <Text allowFontScaling={true} style={[styles.addToCartText, styles.buyNowText]}>Buy Now</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -148,7 +178,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xs,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: SPACING.lg,
   },
   imageContainer: {
     width: "100%",
@@ -273,20 +303,16 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: "row",
     padding: SPACING.lg,
-    paddingBottom: SPACING.xl,
+    paddingBottom: SPACING.lg,
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     alignItems: "center",
   },
   addToCartButton: {
-    flex: 0.45,
+    flex: 1,
     height: 50,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1.5,
@@ -295,7 +321,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: SPACING.md,
+    marginRight: SPACING.sm,
+  },
+  buyNowButton: {
+    marginRight: 0,
+    marginLeft: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  buyNowText: {
+    color: COLORS.white,
   },
   addToCartText: {
     color: COLORS.primary,
@@ -321,22 +356,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: FONT_WEIGHTS.bold,
     paddingHorizontal: 4,
-  },
-  buyButton: {
-    flex: 0.55,
-    height: 50,
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.md,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    ...SHADOWS.medium,
-  },
-  buyButtonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZES.md,
-    fontWeight: FONT_WEIGHTS.bold,
-    marginRight: 8,
   },
 });
 

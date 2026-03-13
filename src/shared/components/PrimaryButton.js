@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { TouchableOpacity, Text, StyleSheet, Animated } from "react-native";
+import { Pressable, Text, StyleSheet, Animated, View } from "react-native";
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, FONT_SIZES, FONT_WEIGHTS } from "../theme/theme";
 
 /**
@@ -7,7 +7,17 @@ import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, FONT_SIZES, FONT_WEIGHTS } fro
  *
  * Variants: "solid" (default), "outline", "destructive", "ghost"
  */
-const PrimaryButton = ({ title, onPress, style, variant = "solid", disabled = false, icon }) => {
+const PrimaryButton = ({
+  title,
+  onPress,
+  style,
+  variant = "solid",
+  disabled = false,
+  icon,
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityRole = "button",
+}) => {
   const scale = useRef(new Animated.Value(1)).current;
 
   const onPressIn = () => {
@@ -51,8 +61,7 @@ const PrimaryButton = ({ title, onPress, style, variant = "solid", disabled = fa
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
-      <TouchableOpacity
-        activeOpacity={0.8}
+      <Pressable
         style={[
           styles.button,
           v.button,
@@ -64,16 +73,24 @@ const PrimaryButton = ({ title, onPress, style, variant = "solid", disabled = fa
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         disabled={disabled}
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={accessibilityLabel || title}
+        accessibilityHint={accessibilityHint}
       >
-        {icon && icon}
-        <Text style={[styles.text, v.text, icon && { marginLeft: SPACING.sm }]}>{title}</Text>
-      </TouchableOpacity>
+        <View style={styles.innerContent} accessible={true}>
+          {icon && icon}
+          <Text allowFontScaling={true} style={[styles.text, v.text, icon && { marginLeft: SPACING.sm }]}>
+            {title}
+          </Text>
+        </View>
+      </Pressable>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   button: {
+    minHeight: 52,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.xl,
     borderRadius: BORDER_RADIUS.md,
@@ -81,6 +98,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     width: "100%",
+  },
+  innerContent: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   text: {
     fontWeight: FONT_WEIGHTS.bold,

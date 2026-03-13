@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS } from "../../shared/theme/theme";
@@ -7,6 +7,9 @@ import PrimaryButton from "../../shared/components/PrimaryButton";
 import apiService from "../../shared/services/apiService";
 import { useAuth } from "../../shared/context/AuthContext";
 import { useCart } from "../../shared/context/CartContext";
+import { TopBar } from "../../shared/components/ScreenActions";
+import ErrorBanner from "../../shared/components/ErrorBanner";
+import { announceMessage } from "../../shared/utils/accessibility";
 
 const CheckoutScreen = ({ route, navigation }) => {
   const { user } = useAuth();
@@ -30,6 +33,7 @@ const CheckoutScreen = ({ route, navigation }) => {
   const [sessionId, setSessionId] = useState(null);
   const [flowId, setFlowId] = useState(null);
   const [flowReady, setFlowReady] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [shippingInfo, setShippingInfo] = useState({
     name: "",
     address: "",
@@ -50,6 +54,9 @@ const CheckoutScreen = ({ route, navigation }) => {
         setFlowReady(true);
       } catch (error) {
         if (cancelled) return;
+        const message = "Could not initialize checkout. Please go back and try again.";
+        setErrorMessage(message);
+        announceMessage(message);
         Alert.alert("Connection Error", "Could not initialize checkout: " + error.message, [
           { text: "Go Back", onPress: () => navigation.goBack() },
         ]);
@@ -64,7 +71,10 @@ const CheckoutScreen = ({ route, navigation }) => {
   // Step 1: Select (use first item as primary for ONDC flow)
   const handleSelect = async () => {
     if (!transactionId) {
-      Alert.alert("Error", "Transaction not ready. Please wait or restart checkout.");
+      const message = "Transaction not ready. Please wait a few seconds.";
+      setErrorMessage(message);
+      announceMessage(message);
+      Alert.alert("Error", message);
       return;
     }
     setLoading(true);
@@ -73,8 +83,12 @@ const CheckoutScreen = ({ route, navigation }) => {
         item_id: items[0]?.id,
         quantity: items[0]?.quantity 
       });
+      setErrorMessage("");
       setStep(2);
     } catch (error) {
+      const message = "Could not confirm selected items.";
+      setErrorMessage(message);
+      announceMessage(message);
       Alert.alert("Error", "Failed to select item: " + error.message);
     } finally {
       setLoading(false);
@@ -84,7 +98,16 @@ const CheckoutScreen = ({ route, navigation }) => {
   // Step 2: Init
   const handleInit = async () => {
     if (!transactionId) {
-      Alert.alert("Error", "Transaction ID is missing. Cannot initialize order.");
+      const message = "Transaction ID is missing. Please restart checkout.";
+      setErrorMessage(message);
+      announceMessage(message);
+      Alert.alert("Error", message);
+      return;
+    }
+    if (!shippingInfo.name || !shippingInfo.address || !shippingInfo.phone) {
+      const message = "Please fill all shipping details before moving ahead.";
+      setErrorMessage(message);
+      announceMessage(message);
       return;
     }
     setLoading(true);
@@ -93,8 +116,12 @@ const CheckoutScreen = ({ route, navigation }) => {
         billing: shippingInfo,
         fulfillment: { type: "DELIVERY" }
       });
+      setErrorMessage("");
       setStep(3);
     } catch (error) {
+      const message = "Could not save your shipping details.";
+      setErrorMessage(message);
+      announceMessage(message);
       Alert.alert("Error", "Failed to initialize order: " + error.message);
     } finally {
       setLoading(false);
@@ -104,7 +131,10 @@ const CheckoutScreen = ({ route, navigation }) => {
   // Step 3: Confirm
   const handleConfirm = async () => {
     if (!transactionId) {
-      Alert.alert("Error", "Transaction ID is missing. Cannot confirm order.");
+      const message = "Transaction missing. Please restart checkout.";
+      setErrorMessage(message);
+      announceMessage(message);
+      Alert.alert("Error", message);
       return;
     }
     setLoading(true);
@@ -121,6 +151,8 @@ const CheckoutScreen = ({ route, navigation }) => {
       const result = await apiService.confirm(transactionId, payload);
       
       clearCart();
+      setErrorMessage("");
+      announceMessage("Order placed successfully");
       Alert.alert("Success", "Order placed successfully!", [
         { text: "OK", onPress: () => navigation.reset({
           index: 0,
@@ -128,6 +160,9 @@ const CheckoutScreen = ({ route, navigation }) => {
         }) }
       ]);
     } catch (error) {
+      const message = "Order could not be confirmed. Please try again.";
+      setErrorMessage(message);
+      announceMessage(message);
       Alert.alert("Error", "Failed to confirm order: " + error.message);
     } finally {
       setLoading(false);
@@ -135,57 +170,56 @@ const CheckoutScreen = ({ route, navigation }) => {
   };
 
   const renderStepHeader = () => {
+    const stepNode = (index, label) => (
+      <View style={styles.stepContainer}>
+        <Pressable
+          onPress={() => {
+            if (index <= step) {
+              setStep(index);
+            }
+          }}
+          style={[styles.stepCircle, step >= index && styles.activeStep]}
+          accessibilityRole="button"
+          accessibilityLabel={`Step ${index}: ${label}`}
+          accessibilityHint={index <= step ? "Open this completed step" : "Complete previous steps first"}
+        >
+          <Text allowFontScaling={true} style={styles.stepNumber}>{index}</Text>
+        </Pressable>
+        <Text allowFontScaling={true} style={styles.stepLabel}>{label}</Text>
+      </View>
+    );
+
     return (
       <View style={styles.stepHeader}>
-        <View style={styles.stepContainer}>
-          <View style={[styles.stepCircle, step >= 1 && styles.activeStep]}>
-            <Text style={styles.stepNumber}>1</Text>
-          </View>
-          <Text style={styles.stepLabel}>Select</Text>
-        </View>
+        {stepNode(1, "Select")}
         <View style={styles.stepLine} />
-        <View style={styles.stepContainer}>
-          <View style={[styles.stepCircle, step >= 2 && styles.activeStep]}>
-            <Text style={styles.stepNumber}>2</Text>
-          </View>
-          <Text style={styles.stepLabel}>Details</Text>
-        </View>
+        {stepNode(2, "Details")}
         <View style={styles.stepLine} />
-        <View style={styles.stepContainer}>
-          <View style={[styles.stepCircle, step >= 3 && styles.activeStep]}>
-            <Text style={styles.stepNumber}>3</Text>
-          </View>
-          <Text style={styles.stepLabel}>Confirm</Text>
-        </View>
+        {stepNode(3, "Confirm")}
       </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <TopBar title="Checkout" onBack={() => navigation.goBack()} />
 
       {renderStepHeader()}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ErrorBanner message={errorMessage} />
         {step === 1 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Review Items ({items.length})</Text>
+            <Text allowFontScaling={true} style={styles.cardTitle}>Review Items ({items.length})</Text>
             {items.map((item, index) => (
               <View key={item.id || index} style={styles.itemRow}>
                 <View style={styles.itemImagePlaceholder}>
                   <Feather name="box" size={24} color={COLORS.textSecondary} />
                 </View>
                 <View style={{ flex: 1, marginLeft: SPACING.md }}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemCategory}>{item.category}</Text>
-                  <Text style={styles.itemPrice}>₹{item.price} × {item.quantity}</Text>
+                  <Text allowFontScaling={true} style={styles.itemName}>{item.name}</Text>
+                  <Text allowFontScaling={true} style={styles.itemCategory}>{item.category}</Text>
+                  <Text allowFontScaling={true} style={styles.itemPrice}>₹{item.price} × {item.quantity}</Text>
                 </View>
               </View>
             ))}
@@ -209,9 +243,9 @@ const CheckoutScreen = ({ route, navigation }) => {
 
         {step === 2 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Shipping Details</Text>
+              <Text allowFontScaling={true} style={styles.cardTitle}>Shipping Details</Text>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name</Text>
+              <Text allowFontScaling={true} style={styles.label}>Full Name</Text>
               <TextInput
                 style={styles.input}
                 value={shippingInfo.name}
@@ -221,7 +255,7 @@ const CheckoutScreen = ({ route, navigation }) => {
               />
             </View>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Shipping Address</Text>
+              <Text allowFontScaling={true} style={styles.label}>Shipping Address</Text>
               <TextInput
                 style={[styles.input, { height: 80 }]}
                 multiline
@@ -232,7 +266,7 @@ const CheckoutScreen = ({ route, navigation }) => {
               />
             </View>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number</Text>
+              <Text allowFontScaling={true} style={styles.label}>Phone Number</Text>
               <TextInput
                 style={styles.input}
                 keyboardType="phone-pad"
@@ -251,26 +285,26 @@ const CheckoutScreen = ({ route, navigation }) => {
               <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: COLORS.success + "20", justifyContent: "center", alignItems: "center", marginBottom: SPACING.sm }}>
                 <Feather name="check" size={32} color={COLORS.success} />
               </View>
-              <Text style={styles.cardTitle}>Ready to Place Order</Text>
-              <Text style={{ textAlign: "center", color: COLORS.textSecondary, marginTop: 4 }}>Review your final details below.</Text>
+              <Text allowFontScaling={true} style={styles.cardTitle}>Ready to Place Order</Text>
+              <Text allowFontScaling={true} style={{ textAlign: "center", color: COLORS.textSecondary, marginTop: 4 }}>Review your final details below.</Text>
             </View>
             <View style={styles.confirmationRow}>
-              <Text style={styles.confirmLabel}>Payment Method:</Text>
-              <Text style={styles.confirmValue}>Cash on Delivery</Text>
+              <Text allowFontScaling={true} style={styles.confirmLabel}>Payment Method:</Text>
+              <Text allowFontScaling={true} style={styles.confirmValue}>Cash on Delivery</Text>
             </View>
             <View style={styles.confirmationRow}>
-              <Text style={styles.confirmLabel}>Total Amount:</Text>
-              <Text style={styles.confirmTotal}>₹{totalAmount}</Text>
+              <Text allowFontScaling={true} style={styles.confirmLabel}>Total Amount:</Text>
+              <Text allowFontScaling={true} style={styles.confirmTotal}>₹{totalAmount}</Text>
             </View>
             <View style={styles.confirmationRow}>
-              <Text style={styles.confirmLabel}>Delivery to:</Text>
-              <Text style={styles.confirmValue}>{shippingInfo.name || "Not provided"}</Text>
+              <Text allowFontScaling={true} style={styles.confirmLabel}>Delivery to:</Text>
+              <Text allowFontScaling={true} style={styles.confirmValue}>{shippingInfo.name || "Not provided"}</Text>
             </View>
             <View style={styles.confirmationRow}>
-              <Text style={styles.confirmLabel}>Items:</Text>
-              <Text style={styles.confirmValue}>{items.length} item(s)</Text>
+              <Text allowFontScaling={true} style={styles.confirmLabel}>Items:</Text>
+              <Text allowFontScaling={true} style={styles.confirmValue}>{items.length} item(s)</Text>
             </View>
-            <Text style={styles.warningText}>Please verify your details before placing the order.</Text>
+            <Text allowFontScaling={true} style={styles.warningText}>Please verify your details before placing the order.</Text>
           </View>
         )}
       </ScrollView>
@@ -281,6 +315,7 @@ const CheckoutScreen = ({ route, navigation }) => {
           onPress={step === 1 ? handleSelect : step === 2 ? handleInit : handleConfirm}
           disabled={loading}
           icon={!loading ? <Feather name="arrow-right" size={20} color={COLORS.white} /> : <ActivityIndicator color={COLORS.white} />}
+          accessibilityHint={step === 3 ? "This will place your order" : "This will save progress and move to the next step"}
         />
       </View>
       
@@ -327,9 +362,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   stepCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: COLORS.border,
     justifyContent: "center",
     alignItems: "center",

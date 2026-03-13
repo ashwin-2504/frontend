@@ -4,9 +4,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS } from "../../shared/theme/theme";
 import { useCart } from "../../shared/context/CartContext";
+import { TopBar } from "../../shared/components/ScreenActions";
 
 const CartScreen = ({ navigation }) => {
-  const { cartItems, removeFromCart, updateQuantity, cartTotal, clearCart } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, cartTotal } = useCart();
 
   const handleCheckout = () => {
     if (cartItems.length > 0) {
@@ -15,7 +16,7 @@ const CartScreen = ({ navigation }) => {
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.cartItem}>
+    <View style={styles.cartItem} accessible={true}>
       <View style={styles.imageContainer}>
         {item.image_url ? (
           <Image source={{ uri: item.image_url }} style={styles.image} />
@@ -26,19 +27,25 @@ const CartScreen = ({ navigation }) => {
         )}
       </View>
       <View style={styles.itemDetails}>
-        <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.itemPrice}>₹{item.price}</Text>
+        <Text allowFontScaling={true} style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+        <Text allowFontScaling={true} style={styles.itemPrice}>₹{item.price}</Text>
         <View style={styles.quantityControls}>
           <TouchableOpacity 
             style={styles.controlBtn}
             onPress={() => updateQuantity(item.id, item.quantity - 1)}
+            accessibilityRole="button"
+            accessibilityLabel={`Reduce quantity for ${item.name}`}
+            accessibilityHint="Decreases one item from cart"
           >
             <Feather name="minus" size={16} color={COLORS.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.quantityText}>{item.quantity}</Text>
+          <Text allowFontScaling={true} style={styles.quantityText}>{item.quantity}</Text>
           <TouchableOpacity 
             style={styles.controlBtn}
             onPress={() => updateQuantity(item.id, item.quantity + 1)}
+            accessibilityRole="button"
+            accessibilityLabel={`Increase quantity for ${item.name}`}
+            accessibilityHint="Adds one more item to cart"
           >
             <Feather name="plus" size={16} color={COLORS.textPrimary} />
           </TouchableOpacity>
@@ -47,6 +54,9 @@ const CartScreen = ({ navigation }) => {
       <TouchableOpacity 
         style={styles.removeBtn}
         onPress={() => removeFromCart(item.id)}
+        accessibilityRole="button"
+        accessibilityLabel={`Remove ${item.name} from cart`}
+        accessibilityHint="Removes this item from your cart"
       >
         <Feather name="trash-2" size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
@@ -55,13 +65,7 @@ const CartScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Shopping Cart</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <TopBar title="Shopping Cart" onBack={() => navigation.goBack()} />
 
       {cartItems.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -81,11 +85,17 @@ const CartScreen = ({ navigation }) => {
           />
           <View style={styles.footer}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total ({cartItems.length} items):</Text>
-              <Text style={styles.summaryTotal}>₹{cartTotal}</Text>
+              <Text allowFontScaling={true} style={styles.summaryLabel}>Total ({cartItems.length} items):</Text>
+              <Text allowFontScaling={true} style={styles.summaryTotal}>₹{cartTotal}</Text>
             </View>
-            <TouchableOpacity style={styles.checkoutBtn} onPress={handleCheckout}>
-              <Text style={styles.checkoutBtnText}>Proceed to Checkout</Text>
+            <TouchableOpacity
+              style={styles.checkoutBtn}
+              onPress={handleCheckout}
+              accessibilityRole="button"
+              accessibilityLabel="Proceed to checkout"
+              accessibilityHint="Move to shipping and order confirmation"
+            >
+              <Text allowFontScaling={true} style={styles.checkoutBtnText}>Proceed to Checkout</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -123,11 +133,11 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 16, fontWeight: "700", color: COLORS.textPrimary, marginBottom: 4 },
   itemPrice: { fontSize: 14, fontWeight: "600", color: COLORS.primary, marginBottom: 8 },
   quantityControls: { flexDirection: "row", alignItems: "center" },
-  controlBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.background, justifyContent: "center", alignItems: "center" },
+  controlBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.background, justifyContent: "center", alignItems: "center" },
   quantityText: { marginHorizontal: SPACING.md, fontSize: 16, fontWeight: "600" },
   removeBtn: { padding: SPACING.sm },
   footer: { padding: SPACING.lg, backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: COLORS.border },
-  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: SPACING.lg },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: SPACING.md },
   summaryLabel: { fontSize: 16, color: COLORS.textSecondary },
   summaryTotal: { fontSize: 20, fontWeight: "800", color: COLORS.primary },
   checkoutBtn: { height: 50, backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.md, justifyContent: "center", alignItems: "center" },

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -18,6 +19,8 @@ import apiService from "../../shared/services/apiService";
 import ProductItem from "../components/ProductItem";
 import OrderItem from "../components/OrderItem";
 import { useAuth } from "../../shared/context/AuthContext";
+import { TopBar } from "../../shared/components/ScreenActions";
+import { announceMessage } from "../../shared/utils/accessibility";
 
 const SellerDashboard = ({ navigation }) => {
   const { user } = useAuth();
@@ -60,6 +63,7 @@ const SellerDashboard = ({ navigation }) => {
       setOrders(ordersData);
     } catch (error) {
       console.error("Failed to fetch seller dashboard data:", error);
+      announceMessage("Could not load dashboard details. Pull down to retry.");
     } finally {
       setLoading(false);
     }
@@ -71,28 +75,35 @@ const SellerDashboard = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Feather name="shopping-bag" size={24} color={COLORS.primary} style={styles.logoIcon} />
-          <Text style={styles.logoText}>BharatMandi</Text>
-        </View>
-        <TouchableOpacity 
-          style={styles.iconButton}
-          onPress={() => Alert.alert(
-            "Logout",
-            "Are you sure you want to logout?",
-            [
-              { text: "Cancel", style: "cancel" },
-              { text: "Logout", style: "destructive", onPress: () => navigation.reset({
-                index: 0,
-                routes: [{ name: "Login" }],
-              }) }
-            ]
-          )}
-        >
-          <Feather name="log-out" size={20} color={COLORS.textSecondary} />
-        </TouchableOpacity>
-      </View>
+      <TopBar
+        title="Seller Dashboard"
+        onBack={() => navigation.navigate("Login")}
+        backHint="Return to login screen"
+        rightNode={
+          <Pressable
+            style={styles.iconButton}
+            onPress={() =>
+              Alert.alert("Logout", "Are you sure you want to logout?", [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Logout",
+                  style: "destructive",
+                  onPress: () =>
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: "Login" }],
+                    }),
+                },
+              ])
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Logout"
+            accessibilityHint="Signs out and goes back to login"
+          >
+            <Feather name="log-out" size={20} color={COLORS.textSecondary} />
+          </Pressable>
+        }
+      />
 
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -113,17 +124,38 @@ const SellerDashboard = ({ navigation }) => {
               <Feather name="user" size={24} color={COLORS.white} />
             </View>
             <View>
-              <Text style={styles.welcomeTitle}>Seller Dashboard</Text>
-              <Text style={styles.welcomeSubtitle}>Manage your products and orders</Text>
+              <Text allowFontScaling={true} style={styles.welcomeTitle}>Seller Dashboard</Text>
+              <Text allowFontScaling={true} style={styles.welcomeSubtitle}>Manage your products and orders</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.statsGrid}>
-          <StatsCard title="Active Products" value={stats.products} icon="box" color={{ bg: "#E8F5E9", icon: "#2E7D32" }} />
-          <StatsCard title="Total Orders" value={stats.orders} icon="file-text" color={{ bg: "#E3F2FD", icon: "#1565C0" }} />
+          <StatsCard
+            title="Active Products"
+            value={stats.products}
+            icon="box"
+            color={{ bg: "#E8F5E9", icon: "#2E7D32" }}
+            onPress={() => navigation.navigate("SellerProducts")}
+            accessibilityHint="Open all your products"
+          />
+          <StatsCard
+            title="Total Orders"
+            value={stats.orders}
+            icon="file-text"
+            color={{ bg: "#E3F2FD", icon: "#1565C0" }}
+            onPress={() => navigation.navigate("SellerOrders")}
+            accessibilityHint="Open your orders list"
+          />
           <StatsCard title="Total Revenue" value={stats.revenue} icon="pie-chart" color={{ bg: "#FFF8E1", icon: "#F9A825" }} />
-          <StatsCard title="Pending Orders" value={stats.pending} icon="clock" color={{ bg: "#FFF3E0", icon: "#E65100" }} />
+          <StatsCard
+            title="Pending Orders"
+            value={stats.pending}
+            icon="clock"
+            color={{ bg: "#FFF3E0", icon: "#E65100" }}
+            onPress={() => navigation.navigate("SellerOrders")}
+            accessibilityHint="Open pending and recent orders"
+          />
         </View>
 
         <View style={styles.sectionHeader}>
@@ -149,7 +181,11 @@ const SellerDashboard = ({ navigation }) => {
         ) : (
           <View style={styles.productList}>
             {products.slice(0, 5).map(product => (
-              <ProductItem key={product.id} product={product} />
+              <ProductItem
+                key={product.id}
+                product={product}
+                onPress={() => navigation.navigate("EditProduct", { product })}
+              />
             ))}
             {products.length > 5 && (
               <TouchableOpacity 

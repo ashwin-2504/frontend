@@ -11,9 +11,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS } from "../theme/theme";
-import PrimaryButton from "../components/PrimaryButton";
 import RoleSelector from "../components/RoleSelector";
 import { useAuth } from "../context/AuthContext";
+import { BottomNextBar } from "../components/ScreenActions";
 
 const LoginScreen = ({ navigation }) => {
   const [role, setRole] = useState("Farmer");
@@ -43,33 +43,37 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.brandCircle}>
               <Feather name="globe" size={36} color={COLORS.white} />
             </View>
-            <Text style={styles.title}>BharatMandi</Text>
-            <Text style={styles.subtitle}>Empowering India's Agriculture</Text>
+            <Text allowFontScaling={true} style={styles.title}>BharatMandi</Text>
+            <Text allowFontScaling={true} style={styles.subtitle}>Empowering India's Agriculture</Text>
           </View>
 
           {/* Login card */}
           <View style={[styles.card, SHADOWS.strong]}>
-            <Text style={styles.cardTitle}>Get Started</Text>
-            <Text style={styles.instruction}>
+            <Text allowFontScaling={true} style={styles.cardTitle}>Get Started</Text>
+            <Text allowFontScaling={true} style={styles.instruction}>
               Choose your role to continue
             </Text>
 
             <RoleSelector selectedRole={role} onRoleChange={setRole} />
 
-            <PrimaryButton
-              title="Enter Dashboard"
-              onPress={handleLogin}
-              icon={<Feather name="arrow-right" size={18} color={COLORS.white} />}
-            />
-
             <View style={styles.footer}>
-              <Text style={styles.footerText}>New here? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-                <Text style={styles.link}>Create Account</Text>
+              <Text allowFontScaling={true} style={styles.footerText}>New here? </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Register")}
+                accessibilityRole="button"
+                accessibilityLabel="Create account"
+                accessibilityHint="Open registration screen"
+              >
+                <Text allowFontScaling={true} style={styles.link}>Create Account</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
+        <BottomNextBar
+          label="Next: Open Dashboard"
+          onPress={handleLogin}
+          accessibilityHint="Signs you in and opens your dashboard"
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

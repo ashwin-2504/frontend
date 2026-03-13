@@ -5,11 +5,15 @@ import { Feather } from "@expo/vector-icons";
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS } from "../../shared/theme/theme";
 import apiService from "../../shared/services/apiService";
 import ProductItem from "../../seller/components/ProductItem"; // Reusing the ProductItem component
+import { TopBar } from "../../shared/components/ScreenActions";
+import ErrorBanner from "../../shared/components/ErrorBanner";
+import { announceMessage } from "../../shared/utils/accessibility";
 
 const MarketplaceScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [products, setProducts] = useState([]);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     fetchAllProducts();
@@ -20,8 +24,12 @@ const MarketplaceScreen = ({ navigation }) => {
     try {
       const data = await apiService.getAllProducts();
       setProducts(data);
+      setErrorMessage("");
     } catch (error) {
       console.error("Failed to fetch products:", error);
+      const message = "Could not load products. Please try again.";
+      setErrorMessage(message);
+      announceMessage(message);
     } finally {
       setLoading(false);
     }
@@ -36,8 +44,12 @@ const MarketplaceScreen = ({ navigation }) => {
     try {
       const data = await apiService.searchProducts(searchQuery);
       setProducts(data);
+      setErrorMessage("");
     } catch (error) {
       console.error("Search failed:", error);
+      const message = "Search failed. Check your network and try again.";
+      setErrorMessage(message);
+      announceMessage(message);
     } finally {
       setLoading(false);
     }
@@ -45,15 +57,23 @@ const MarketplaceScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Marketplace</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <TopBar
+        title="Marketplace"
+        onBack={() => navigation.goBack()}
+        rightNode={
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Cart")}
+            accessibilityRole="button"
+            accessibilityLabel="Open cart"
+            accessibilityHint="Go to shopping cart"
+          >
+            <Feather name="shopping-cart" size={22} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.searchContainer}>
+        <ErrorBanner message={errorMessage} />
         <View style={styles.searchInputWrapper}>
           <Feather name="search" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
           <TextInput

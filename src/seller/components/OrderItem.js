@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, STATUS_COLORS, FONT_SIZES, FONT_WEIGHTS } from '../../shared/theme/theme';
 
@@ -15,30 +15,36 @@ const OrderItem = ({ order, onPress }) => {
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
+    <Pressable
+      style={styles.container}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Order ${order.id.substring(0, 8)}, status ${order.status}, amount rupees ${order.total_amount}`}
+      accessibilityHint="Opens detailed order status"
+    >
       <View style={styles.header}>
         <View style={styles.idContainer}>
           <Feather name="hash" size={14} color={COLORS.textSecondary} />
-          <Text style={styles.orderId}>{order.id.substring(0, 8)}...</Text>
+          <Text allowFontScaling={true} style={styles.orderId}>{order.id.substring(0, 8)}...</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusBg(order.status) }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
+          <Text allowFontScaling={true} style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
         </View>
       </View>
       
       <View style={styles.content}>
-        <Text style={styles.customerName}>{order.customer_name}</Text>
-        <Text style={styles.orderDate}>{new Date(order.created_at).toLocaleDateString()}</Text>
+        <Text allowFontScaling={true} style={styles.customerName}>{order.customer_name}</Text>
+        <Text allowFontScaling={true} style={styles.orderDate}>{new Date(order.created_at).toLocaleDateString()}</Text>
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.amount}>₹{order.total_amount}</Text>
+        <Text allowFontScaling={true} style={styles.amount}>₹{order.total_amount}</Text>
         <View style={styles.itemsCount}>
           <Feather name="package" size={12} color={COLORS.textSecondary} />
-          <Text style={styles.countText}>{order.items?.length || 0} items</Text>
+          <Text allowFontScaling={true} style={styles.countText}>{order.items?.length || 0} items</Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -46,9 +52,12 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: COLORS.white,
     padding: SPACING.md,
+    minHeight: 72,
     borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.md,
     ...SHADOWS.light,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
   },
   header: {
     flexDirection: 'row',
@@ -97,7 +106,7 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.sm,
   },
   amount: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     color: COLORS.textPrimary,
   },

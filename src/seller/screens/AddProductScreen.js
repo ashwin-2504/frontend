@@ -18,10 +18,14 @@ import * as ImagePicker from "expo-image-picker";
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS } from "../../shared/theme/theme";
 import apiService from "../../shared/services/apiService";
 import { useAuth } from "../../shared/context/AuthContext";
+import { BottomNextBar, TopBar } from "../../shared/components/ScreenActions";
+import ErrorBanner from "../../shared/components/ErrorBanner";
+import { announceMessage } from "../../shared/utils/accessibility";
 
 const AddProductScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -45,6 +49,7 @@ const AddProductScreen = ({ navigation }) => {
 
     if (!result.canceled) {
       handleChange("image_url", result.assets[0].uri);
+      setErrorMessage("");
     }
   };
 
@@ -52,7 +57,10 @@ const AddProductScreen = ({ navigation }) => {
     const { name, price, category, stock_quantity } = formData;
 
     if (!name || !price || !category || !stock_quantity) {
-      Alert.alert("Error", "Please fill in all required fields (Name, Price, Category, Stock)");
+      const message = "Fill all required fields: name, price, category, and stock.";
+      setErrorMessage(message);
+      announceMessage(message);
+      Alert.alert("Error", message);
       return;
     }
 
@@ -67,11 +75,16 @@ const AddProductScreen = ({ navigation }) => {
       };
 
       await apiService.addProduct(productPayload);
+      setErrorMessage("");
+      announceMessage("Product created successfully");
       Alert.alert("Success", "Product added successfully!", [
         { text: "OK", onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
       console.error("Failed to add product:", error);
+      const message = "Failed to add product. Please check details and retry.";
+      setErrorMessage(message);
+      announceMessage(message);
       Alert.alert("Error", "Failed to add product. Please try again.");
     } finally {
       setLoading(false);
@@ -80,64 +93,67 @@ const AddProductScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add New Product</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <TopBar title="Add New Product" onBack={() => navigation.goBack()} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ErrorBanner message={errorMessage} />
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Product Name *</Text>
+            <Text allowFontScaling={true} style={styles.label}>Product Name *</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter product name"
               value={formData.name}
               onChangeText={(text) => handleChange("name", text)}
+              accessibilityLabel="Product name"
+              accessibilityHint="Enter the product title"
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Category *</Text>
+            <Text allowFontScaling={true} style={styles.label}>Category *</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. Vegetables, Grains"
               value={formData.category}
               onChangeText={(text) => handleChange("category", text)}
+              accessibilityLabel="Product category"
+              accessibilityHint="Example vegetables or grains"
             />
           </View>
 
           <View style={styles.row}>
             <View style={[styles.formGroup, { flex: 1, marginRight: SPACING.md }]}>
-              <Text style={styles.label}>Price (₹) *</Text>
+              <Text allowFontScaling={true} style={styles.label}>Price (₹) *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="0.00"
                 keyboardType="numeric"
                 value={formData.price}
                 onChangeText={(text) => handleChange("price", text)}
+                accessibilityLabel="Price in rupees"
+                accessibilityHint="Enter per-unit price"
               />
             </View>
             <View style={[styles.formGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Stock Quantity *</Text>
+              <Text allowFontScaling={true} style={styles.label}>Stock Quantity *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="0"
                 keyboardType="numeric"
                 value={formData.stock_quantity}
                 onChangeText={(text) => handleChange("stock_quantity", text)}
+                accessibilityLabel="Stock quantity"
+                accessibilityHint="Enter available quantity"
               />
             </View>
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Description</Text>
+            <Text allowFontScaling={true} style={styles.label}>Description</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Enter product description"
@@ -145,35 +161,37 @@ const AddProductScreen = ({ navigation }) => {
               numberOfLines={4}
               value={formData.description}
               onChangeText={(text) => handleChange("description", text)}
+              accessibilityLabel="Product description"
+              accessibilityHint="Describe product quality and details"
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Product Image</Text>
-            <TouchableOpacity style={styles.imagePickerContainer} onPress={pickImage}>
+            <Text allowFontScaling={true} style={styles.label}>Product Image</Text>
+            <TouchableOpacity
+              style={styles.imagePickerContainer}
+              onPress={pickImage}
+              accessibilityRole="button"
+              accessibilityLabel="Select product image"
+              accessibilityHint="Opens photo library to choose image"
+            >
               {formData.image_url ? (
                 <Image source={{ uri: formData.image_url }} style={styles.previewImage} />
               ) : (
                 <View style={styles.imagePlaceholder}>
                   <Feather name="camera" size={32} color={COLORS.textSecondary} />
-                  <Text style={styles.imagePlaceholderText}>Tap to select an image</Text>
+                  <Text allowFontScaling={true} style={styles.imagePlaceholderText}>Tap to select an image</Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={[styles.submitButton, loading && styles.disabledButton]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={COLORS.white} />
-            ) : (
-              <Text style={styles.submitButtonText}>Create Product</Text>
-            )}
-          </TouchableOpacity>
         </ScrollView>
+        <BottomNextBar
+          label={loading ? "Saving..." : "Next: Create Product"}
+          onPress={handleSubmit}
+          disabled={loading}
+          accessibilityHint="Saves this product and returns to previous screen"
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

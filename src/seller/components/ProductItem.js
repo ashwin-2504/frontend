@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS } from '../../shared/theme/theme';
 
@@ -23,7 +23,13 @@ const ProductItem = ({ product, onPress, context = "seller" }) => {
   const stock = getStockDisplay();
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+    <Pressable
+      style={styles.container}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${product.name}, ${product.category}, price rupees ${product.price}`}
+      accessibilityHint="Opens product details"
+    >
       <View style={styles.imageContainer}>
         {product.image_url ? (
           <Image source={{ uri: product.image_url }} style={styles.image} />
@@ -34,19 +40,19 @@ const ProductItem = ({ product, onPress, context = "seller" }) => {
         )}
       </View>
       <View style={styles.details}>
-        <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
-        <Text style={styles.category}>{product.category}</Text>
+        <Text allowFontScaling={true} style={styles.name} numberOfLines={1}>{product.name}</Text>
+        <Text allowFontScaling={true} style={styles.category}>{product.category}</Text>
         <View style={styles.footer}>
-          <Text style={styles.price}>₹{product.price}</Text>
+          <Text allowFontScaling={true} style={styles.price}>₹{product.price}</Text>
           <View style={[styles.stockBadge, { backgroundColor: stock.bg }]}>
-            <Text style={[styles.stockText, { color: stock.color }]}>
+            <Text allowFontScaling={true} style={[styles.stockText, { color: stock.color }]}>
               {stock.text}
             </Text>
           </View>
         </View>
       </View>
       <Feather name="chevron-right" size={20} color={COLORS.border} />
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -56,9 +62,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.white,
     padding: SPACING.md,
+    minHeight: 72,
     borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.md,
     ...SHADOWS.light,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
   },
   imageContainer: {
     width: 60,
@@ -98,7 +107,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   price: {
-    fontSize: FONT_SIZES.md,
+    fontSize: FONT_SIZES.lg,
     fontWeight: FONT_WEIGHTS.heavy,
     color: COLORS.primary,
   },
