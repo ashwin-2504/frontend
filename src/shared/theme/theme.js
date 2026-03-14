@@ -17,8 +17,8 @@ export const COLORS = {
 };
 
 export const STATUS_COLORS = {
-  PENDING:   { bg: "#FFF3E0", text: "#E65100", icon: "clock" },
-  SHIPPED:   { bg: "#E3F2FD", text: "#1565C0", icon: "truck" },
+  PENDING:   { bg: "#FFF3E0", text: "#e60000", icon: "clock" },
+  SHIPPED:   { bg: "#E3F2FD", text: "#15ff00", icon: "truck" },
   DELIVERED: { bg: "#E8F5E9", text: "#2E7D32", icon: "check-circle" },
   CANCELLED: { bg: "#FFEBEE", text: "#C62828", icon: "x-circle" },
 };

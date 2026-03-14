@@ -43,12 +43,14 @@ This will start the **Expo CLI** and display a QR code in your terminal.
 3. **iOS**: Use the camera app to scan the terminal's QR code, or open the link from the Expo Go app.
 4. Ensure your phone and computer are on the **same Wi-Fi network**.
 
-### Simulators / Emulators
+### Build & OTA (No Local Android SDK)
 
-If you have Android Studio or Xcode installed, you can run the app on a simulator:
+For production binaries and air updates, use EAS:
 
-- Press **`a`** for Android emulator.
-- Press **`i`** for iOS simulator.
+```bash
+npm run build:android
+npm run update:production -- --message "Your update message"
+```
 
 ## 🛠️ Project Structure
 
