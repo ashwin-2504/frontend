@@ -1,46 +1,54 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, FONT_SIZES, FONT_WEIGHTS } from "../theme/theme";
+import { theme } from "../theme/theme";
+import StyledText from "./StyledText";
 
 const ROLES = [
-  { key: "Farmer", icon: "sun", subtitle: "Sell your produce", color: COLORS.primary },
-  { key: "Buyer", icon: "shopping-bag", subtitle: "Shop fresh goods", color: COLORS.info },
+  { key: "seller", label: "Farmer", icon: "sun", subtitle: "Sell your produce", color: theme.COLORS.primary },
+  { key: "customer", label: "Buyer", icon: "shopping-bag", subtitle: "Shop fresh goods", color: theme.COLORS.info },
 ];
 
-const RoleSelector = ({ selectedRole, onRoleChange }) => {
+const RoleSelector = ({ selectedRole, onRoleChange, disabled = false }) => {
   return (
     <View style={styles.container}>
       {ROLES.map((role) => {
         const isSelected = selectedRole === role.key;
+        const activeColor = isSelected ? role.color : theme.COLORS.border;
+        const bgTint = isSelected ? (role.key === 'seller' ? theme.COLORS.primaryLight : theme.COLORS.info + "10") : theme.COLORS.white;
+
         return (
           <Pressable
             key={role.key}
+            disabled={disabled}
             onPress={() => onRoleChange(role.key)}
             style={[
-              styles.roleBtn,
-              isSelected
-                ? [styles.selectedBtn, { borderColor: role.color, backgroundColor: role.color + "10" }]
-                : styles.unselectedBtn,
-              isSelected && SHADOWS.light,
+              styles.roleCard,
+              { borderColor: activeColor, backgroundColor: bgTint },
+              isSelected && theme.SHADOWS.medium,
+              disabled && styles.disabledCard,
             ]}
-            accessibilityRole="button"
-            accessibilityLabel={`${role.key} role`}
-            accessibilityHint={`Select ${role.key} to ${role.subtitle.toLowerCase()}`}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: isSelected, disabled }}
           >
-            <View style={[styles.iconCircle, { backgroundColor: isSelected ? role.color + "20" : COLORS.background }]}>
-              <Feather name={role.icon} size={22} color={isSelected ? role.color : COLORS.textSecondary} />
+            <View style={[styles.iconBox, { backgroundColor: isSelected ? role.color : theme.COLORS.surface }]}>
+              <Feather name={role.icon} size={24} color={isSelected ? theme.COLORS.white : theme.COLORS.textSecondary} />
             </View>
-            <Text
-              allowFontScaling={true}
-              style={[
-                styles.roleText,
-                isSelected ? { color: role.color } : styles.unselectedText,
-              ]}
-            >
-              {role.key}
-            </Text>
-            <Text allowFontScaling={true} style={styles.subtitle}>{role.subtitle}</Text>
+            <View style={styles.textContainer}>
+              <StyledText
+                variant="bodyPrimary"
+                bold
+                color={isSelected ? role.color : theme.COLORS.textPrimary}
+              >
+                {role.label}
+              </StyledText>
+              <StyledText variant="bodySecondary" color={theme.COLORS.textSecondary}>{role.subtitle}</StyledText>
+            </View>
+            {isSelected && (
+              <View style={[styles.checkCircle, { backgroundColor: role.color }]}>
+                <Feather name="check" size={14} color={theme.COLORS.white} />
+              </View>
+            )}
           </Pressable>
         );
       })}
@@ -50,46 +58,43 @@ const RoleSelector = ({ selectedRole, onRoleChange }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     width: "100%",
-    marginVertical: SPACING.lg,
+    marginVertical: theme.SPACING.lg,
+    gap: theme.SPACING.md,
   },
-  roleBtn: {
-    flex: 0.48,
-    paddingVertical: SPACING.lg,
-    minHeight: 84,
-    borderRadius: BORDER_RADIUS.lg,
-    alignItems: "center",
+  roleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.SPACING.md,
+    borderRadius: theme.BORDER_RADIUS.lg,
+    borderWidth: 2,
+    overflow: 'hidden',
+  },
+  unselectedCard: {
+    borderColor: theme.COLORS.border,
+    backgroundColor: theme.COLORS.white,
+  },
+  disabledCard: {
+    opacity: 0.6,
+  },
+  iconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.BORDER_RADIUS.md,
     justifyContent: "center",
-    borderWidth: 1.5,
-  },
-  selectedBtn: {
-    borderColor: COLORS.primary,
-  },
-  unselectedBtn: {
-    backgroundColor: COLORS.white,
-    borderColor: COLORS.border,
-  },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
     alignItems: "center",
-    marginBottom: SPACING.sm,
   },
-  roleText: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: FONT_WEIGHTS.bold,
+  textContainer: {
+    flex: 1,
+    paddingHorizontal: theme.SPACING.md,
   },
-  unselectedText: {
-    color: COLORS.textSecondary,
-  },
-  subtitle: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
+  checkCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
   },
 });
 

@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
-import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS } from "../theme/theme";
+import { View, StyleSheet, Pressable } from "react-native";
+import { theme } from "../theme/theme";
+import StyledText from "./StyledText";
 import { Feather } from "@expo/vector-icons";
 
 /**
@@ -8,13 +9,13 @@ import { Feather } from "@expo/vector-icons";
  * color: { bg: '#E8F5E9', icon: '#2E7D32' }  (defaults to green)
  */
 const StatsCard = ({ title, value, icon, color, onPress, accessibilityHint }) => {
-  const iconBg = color?.bg || COLORS.primaryLight;
-  const iconColor = color?.icon || COLORS.primary;
+  const iconBg = color?.bg || theme.COLORS.primaryLight;
+  const iconColor = color?.icon || theme.COLORS.primary;
 
   const Wrapper = onPress ? Pressable : View;
   return (
     <Wrapper
-      style={[styles.card, SHADOWS.light]}
+      style={[styles.card, theme.SHADOWS.light]}
       accessible={true}
       accessibilityRole={onPress ? "button" : "summary"}
       accessibilityLabel={`${title}: ${value}`}
@@ -25,8 +26,8 @@ const StatsCard = ({ title, value, icon, color, onPress, accessibilityHint }) =>
         <Feather name={icon} size={20} color={iconColor} />
       </View>
       <View style={styles.content}>
-        <Text allowFontScaling={true} style={styles.value}>{value}</Text>
-        <Text allowFontScaling={true} style={styles.title}>{title}</Text>
+        <StyledText variant="sectionHeader" bold>{value}</StyledText>
+        <StyledText variant="caption" color={theme.COLORS.textSecondary}>{title}</StyledText>
       </View>
     </Wrapper>
   );
@@ -34,35 +35,24 @@ const StatsCard = ({ title, value, icon, color, onPress, accessibilityHint }) =>
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.white,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: theme.COLORS.white,
+    padding: theme.SPACING.md,
+    borderRadius: theme.BORDER_RADIUS.lg,
     width: "48%",
-    marginBottom: SPACING.md,
+    marginBottom: theme.SPACING.md,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
+    borderColor: theme.COLORS.primaryLight,
     minHeight: 92,
   },
   iconContainer: {
-    marginRight: SPACING.sm,
+    marginRight: theme.SPACING.sm,
     padding: 12,
-    borderRadius: BORDER_RADIUS.sm,
+    borderRadius: theme.BORDER_RADIUS.sm,
   },
   content: {
     flex: 1,
-  },
-  value: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: FONT_WEIGHTS.heavy,
-    color: COLORS.textPrimary,
-  },
-  title: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHTS.semibold,
-    marginTop: 2,
   },
 });
 

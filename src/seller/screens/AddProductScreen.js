@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -11,16 +10,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { COLORS, SPACING, SHADOWS, BORDER_RADIUS } from "../../shared/theme/theme";
-import apiService from "../../shared/services/apiService";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from "../../shared/context/AuthContext";
-import { BottomNextBar, TopBar } from "../../shared/components/ScreenActions";
-import ErrorBanner from "../../shared/components/ErrorBanner";
+import { theme } from "../../shared/theme/theme";
+import StyledText from "../../shared/components/StyledText";
+import apiService from "../../shared/services/apiService";
+import { TopBar, BottomNextBar } from "../../shared/components/ScreenActions";
 import { announceMessage } from "../../shared/utils/accessibility";
+import ErrorBanner from "../../shared/components/ErrorBanner";
+import CustomInput from "../../shared/components/CustomInput";
 
 const AddProductScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -30,10 +33,34 @@ const AddProductScreen = ({ navigation }) => {
     name: "",
     description: "",
     price: "",
-    category: "",
-    stock_quantity: "",
-    image_url: "",
+    category: "Vegetables",
+    stockQty: "",
+    imageUrls: [],
+    unitType: "kg",
+    isOrganic: false,
+    isChemicalFree: false,
+    deliveryMode: "SELF",
+    deliveryRadius: "10",
+    minQty: "1",
+    maxQty: "100",
+    freshness: "TODAY",
+    grade: "A",
+    discountPercentage: "0",
+    bulkPricing: [], // [{min: 5, max: 10, price: 20}]
+    harvestDate: new Date().toISOString().split('T')[0],
+    delivery_charge: user?.deliveryCharge?.toString() || "30",
   });
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      handleChange("harvestDate", selectedDate.toISOString().split('T')[0]);
+    }
+  };
+
+  const [newTier, setNewTier] = useState({ min: "", max: "", price: "" });
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -48,33 +75,113 @@ const AddProductScreen = ({ navigation }) => {
     });
 
     if (!result.canceled) {
-      handleChange("image_url", result.assets[0].uri);
+      handleChange("imageUrls", [result.assets[0].uri]);
       setErrorMessage("");
     }
   };
 
-  const handleSubmit = async () => {
-    const { name, price, category, stock_quantity } = formData;
+  const addTier = () => {
+    if (!newTier.min || !newTier.price) {
+      Alert.alert("Error", "Min Quantity and Price are required for a tier.");
+      return;
+    }
+    const tier = {
+      min: parseInt(newTier.min),
+      max: newTier.max ? parseInt(newTier.max) : null,
+      price: parseFloat(newTier.price),
+    };
+    setFormData(prev => ({
+      ...prev,
+      bulkPricing: [...prev.bulkPricing, tier].sort((a, b) => a.min - b.min)
+    }));
+    setNewTier({ min: "", max: "", price: "" });
+  };
 
-    if (!name || !price || !category || !stock_quantity) {
-      const message = "Fill all required fields: name, price, category, and stock.";
+  const removeTier = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      bulkPricing: prev.bulkPricing.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSubmit = async () => {
+    const { name, price, category, stockQty, unitType } = formData;
+
+    if (!name || !price || !category || !stockQty || !unitType) {
+      const message = "Fill all required fields: name, price, category, stock, and unit.";
       setErrorMessage(message);
       announceMessage(message);
       Alert.alert("Error", message);
       return;
     }
 
+    if (!user?.id || user?.role !== "seller") {
+      const message = "Only a signed-in farmer can add products.";
+      setErrorMessage(message);
+      announceMessage(message);
+      Alert.alert("Access denied", message);
+      return;
+    }
+
+    if (!user?.farmLocation?.lat || !user?.farmLocation?.lng) {
+        const message = "Farm location required to add products.";
+        setErrorMessage(message);
+        Alert.alert(
+            "Location Required", 
+            "Please set your farm location in Profile > Account Details before adding products.",
+            [
+                { text: "Go to Profile", onPress: () => navigation.navigate("Profile") },
+                { text: "Cancel", style: "cancel" }
+            ]
+        );
+        return;
+    }
+
     setLoading(true);
     try {
-      // For now, using a hardcoded seller_id. In a real app, this would come from auth.
-      const productPayload = {
-        ...formData,
-        price: parseFloat(price),
-        stock_quantity: parseInt(stock_quantity, 10),
-        seller_id: user?.id || "seller_123",
-      };
+      const formDataToSend = new FormData();
+      
+      // Append core fields
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("description", formData.description || "");
+      formDataToSend.append("price", price);
+      formDataToSend.append("category", formData.category);
+      formDataToSend.append("stockQty", stockQty);
+      formDataToSend.append("unitType", formData.unitType);
+      formDataToSend.append("isOrganic", String(formData.isOrganic));
+      formDataToSend.append("isChemicalFree", String(formData.isChemicalFree));
+      formDataToSend.append("deliveryMode", formData.deliveryMode);
+      formDataToSend.append("deliveryRadius", formData.deliveryRadius);
+      formDataToSend.append("minQty", formData.minQty);
+      formDataToSend.append("maxQty", formData.maxQty);
+      formDataToSend.append("freshness", formData.freshness);
+      formDataToSend.append("grade", formData.grade);
+      formDataToSend.append("discountPercentage", formData.discountPercentage);
+      formDataToSend.append("harvestDate", formData.harvestDate);
+      formDataToSend.append("isAvailable", "true");
+      formDataToSend.append("delivery_charge", formData.delivery_charge);
+      formDataToSend.append("sellerId", user.id);
+      formDataToSend.append("isAvailable", "true");
+      
+      // Serialize array objects
+      formDataToSend.append("bulkPricing", JSON.stringify(formData.bulkPricing));
 
-      await apiService.addProduct(productPayload);
+      // Append images with correct React Native file format
+      if (formData.imageUrls && formData.imageUrls.length > 0) {
+        formData.imageUrls.forEach((uri, index) => {
+          const fileName = uri.split('/').pop() || `photo_${index}.jpg`;
+          const match = /\.(\w+)$/.exec(fileName);
+          const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+          formDataToSend.append("images", {
+            uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
+            name: fileName,
+            type: type,
+          });
+        });
+      }
+
+      await apiService.addProduct(formDataToSend);
       setErrorMessage("");
       announceMessage("Product created successfully");
       Alert.alert("Success", "Product added successfully!", [
@@ -101,93 +208,296 @@ const AddProductScreen = ({ navigation }) => {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <ErrorBanner message={errorMessage} />
-          <View style={styles.formGroup}>
-            <Text allowFontScaling={true} style={styles.label}>Product Name *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter product name"
-              value={formData.name}
-              onChangeText={(text) => handleChange("name", text)}
-              accessibilityLabel="Product name"
-              accessibilityHint="Enter the product title"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text allowFontScaling={true} style={styles.label}>Category *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Vegetables, Grains"
-              value={formData.category}
-              onChangeText={(text) => handleChange("category", text)}
-              accessibilityLabel="Product category"
-              accessibilityHint="Example vegetables or grains"
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.formGroup, { flex: 1, marginRight: SPACING.md }]}>
-              <Text allowFontScaling={true} style={styles.label}>Price (₹) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0.00"
-                keyboardType="numeric"
-                value={formData.price}
-                onChangeText={(text) => handleChange("price", text)}
-                accessibilityLabel="Price in rupees"
-                accessibilityHint="Enter per-unit price"
-              />
-            </View>
-            <View style={[styles.formGroup, { flex: 1 }]}>
-              <Text allowFontScaling={true} style={styles.label}>Stock Quantity *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0"
-                keyboardType="numeric"
-                value={formData.stock_quantity}
-                onChangeText={(text) => handleChange("stock_quantity", text)}
-                accessibilityLabel="Stock quantity"
-                accessibilityHint="Enter available quantity"
-              />
-            </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text allowFontScaling={true} style={styles.label}>Description</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Enter product description"
-              multiline
-              numberOfLines={4}
-              value={formData.description}
-              onChangeText={(text) => handleChange("description", text)}
-              accessibilityLabel="Product description"
-              accessibilityHint="Describe product quality and details"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text allowFontScaling={true} style={styles.label}>Product Image</Text>
+          {/* Overhauled Image picker */}
+          <View style={styles.imageSection}>
             <TouchableOpacity
-              style={styles.imagePickerContainer}
+              style={styles.imagePickerHero}
               onPress={pickImage}
-              accessibilityRole="button"
-              accessibilityLabel="Select product image"
-              accessibilityHint="Opens photo library to choose image"
+              activeOpacity={0.9}
             >
-              {formData.image_url ? (
-                <Image source={{ uri: formData.image_url }} style={styles.previewImage} />
+              {formData.imageUrls && formData.imageUrls.length > 0 ? (
+                <>
+                  <Image source={{ uri: formData.imageUrls[0] }} style={styles.heroImage} />
+                  <View style={styles.imageOverlay}>
+                    <Feather name="camera" size={18} color={theme.COLORS.white} />
+                    <StyledText variant="caption" bold color={theme.COLORS.white}>Change Photo</StyledText>
+                  </View>
+                </>
               ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Feather name="camera" size={32} color={COLORS.textSecondary} />
-                  <Text allowFontScaling={true} style={styles.imagePlaceholderText}>Tap to select an image</Text>
+                <View style={styles.imagePlaceholderHero}>
+                  <View style={styles.cameraCircle}>
+                    <Feather name="camera" size={32} color={theme.COLORS.primary} />
+                  </View>
+                  <StyledText variant="sectionHeader" color={theme.COLORS.primary} bold>Add Product Photo</StyledText>
+                  <StyledText variant="caption" color={theme.COLORS.textSecondary} style={{ marginTop: 4 }}>
+                    Real photos increase trust by 80%
+                  </StyledText>
                 </View>
               )}
             </TouchableOpacity>
           </View>
+
+          {/* Core Info Section */}
+          <View style={styles.cardSection}>
+            <View style={styles.cardHeader}>
+              <Feather name="info" size={20} color={theme.COLORS.primary} />
+              <StyledText variant="sectionHeader" bold>Core Listing Info</StyledText>
+            </View>
+            
+            <CustomInput
+              label="Product Name"
+              placeholder="e.g. Fresh Tomatoes"
+              icon="shopping-bag"
+              value={formData.name}
+              onChangeText={(t) => handleChange("name", t)}
+            />
+
+            <View style={styles.row}>
+              <CustomInput
+                label="Category"
+                placeholder="Vegetables"
+                icon="grid"
+                style={{ flex: 1, marginRight: theme.SPACING.md }}
+                value={formData.category}
+                onChangeText={(t) => handleChange("category", t)}
+              />
+              <CustomInput
+                label="Unit"
+                placeholder="kg"
+                icon="layers"
+                style={{ flex: 1 }}
+                value={formData.unitType}
+                onChangeText={(t) => handleChange("unitType", t)}
+              />
+            </View>
+
+            <View style={styles.row}>
+              <CustomInput
+                label="Price"
+                placeholder="0.00"
+                icon="tag"
+                prefix="₹"
+                suffix={`/${formData.unitType}`}
+                keyboardType="numeric"
+                style={{ flex: 1.2, marginRight: theme.SPACING.md }}
+                value={formData.price}
+                onChangeText={(t) => handleChange("price", t)}
+              />
+              <CustomInput
+                label="Stock"
+                placeholder="100"
+                icon="package"
+                keyboardType="numeric"
+                style={{ flex: 1 }}
+                value={formData.stockQty}
+                onChangeText={(t) => handleChange("stockQty", t)}
+              />
+            </View>
+          </View>
+
+          {/* Quality & Trust Section */}
+          <View style={styles.cardSection}>
+            <View style={styles.cardHeader}>
+              <Feather name="shield" size={20} color={theme.COLORS.primary} />
+              <StyledText variant="sectionHeader" bold>Quality & Trust</StyledText>
+            </View>
+
+            <View style={{ marginBottom: 20 }}>
+              <StyledText variant="label" color={theme.COLORS.textSecondary} style={{ marginBottom: 8 }}>
+                Harvest / Picking Date
+              </StyledText>
+              <TouchableOpacity 
+                style={styles.datePickerButton} 
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Feather name="calendar" size={18} color={theme.COLORS.primary} />
+                <StyledText style={{ marginLeft: 10 }}>
+                  {formData.harvestDate || "Select Date"}
+                </StyledText>
+              </TouchableOpacity>
+              
+              {showDatePicker && (
+                <DateTimePicker
+                  value={formData.harvestDate ? new Date(formData.harvestDate) : new Date()}
+                  mode="date"
+                  display="default"
+                  maximumDate={new Date()}
+                  onChange={onDateChange}
+                />
+              )}
+            </View>
+
+            <StyledText variant="label" color={theme.COLORS.textSecondary} style={{ marginBottom: 8 }}>
+              Quality Grade
+            </StyledText>
+            <View style={styles.pillSelector}>
+              {["A", "B", "MIXED"].map((val) => (
+                <TouchableOpacity
+                  key={val}
+                  style={[styles.pill, formData.grade === val && styles.pillActive]}
+                  onPress={() => handleChange("grade", val)}
+                  activeOpacity={0.7}
+                >
+                  <Feather 
+                    name={val === "A" ? "star" : val === "B" ? "thumbs-up" : "package"} 
+                    size={14} 
+                    color={formData.grade === val ? theme.COLORS.white : theme.COLORS.textSecondary} 
+                    style={{ marginRight: 6 }}
+                  />
+                  <StyledText 
+                    variant="caption" 
+                    bold 
+                    color={formData.grade === val ? theme.COLORS.white : theme.COLORS.textSecondary}
+                  >
+                    {val}
+                  </StyledText>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.switchGroup}>
+              <View style={styles.switchRow}>
+                <View style={styles.switchInfo}>
+                  <StyledText variant="bodyPrimary" bold>Organic Certified</StyledText>
+                  <StyledText variant="caption" color={theme.COLORS.textSecondary}>
+                    Grown without synthetic pesticides
+                  </StyledText>
+                </View>
+                <Switch
+                  value={formData.isOrganic}
+                  onValueChange={(val) => handleChange("isOrganic", val)}
+                  trackColor={{ true: theme.COLORS.primary, false: theme.COLORS.border }}
+                  thumbColor={formData.isOrganic ? theme.COLORS.white : '#f4f3f4'}
+                />
+              </View>
+              <View style={styles.switchRow}>
+                <View style={styles.switchInfo}>
+                  <StyledText variant="bodyPrimary" bold>Chemical Free</StyledText>
+                  <StyledText variant="caption" color={theme.COLORS.textSecondary}>
+                    No post-harvest chemical treatment
+                  </StyledText>
+                </View>
+                <Switch
+                  value={formData.isChemicalFree}
+                  onValueChange={(val) => handleChange("isChemicalFree", val)}
+                  trackColor={{ true: theme.COLORS.primary, false: theme.COLORS.border }}
+                  thumbColor={formData.isChemicalFree ? theme.COLORS.white : '#f4f3f4'}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Logistics Section */}
+          <View style={styles.cardSection}>
+            <View style={styles.cardHeader}>
+              <Feather name="truck" size={20} color={theme.COLORS.primary} />
+              <StyledText variant="sectionHeader" bold>Logistics & Delivery</StyledText>
+            </View>
+
+            <View style={styles.row}>
+              <CustomInput
+                label="Min Order"
+                placeholder="1"
+                icon="minus-circle"
+                suffix={formData.unitType}
+                keyboardType="numeric"
+                style={{ flex: 1, marginRight: theme.SPACING.md }}
+                value={formData.minQty}
+                onChangeText={(t) => handleChange("minQty", t)}
+              />
+              <CustomInput
+                label="Max Order"
+                placeholder="100"
+                icon="plus-circle"
+                suffix={formData.unitType}
+                keyboardType="numeric"
+                style={{ flex: 1 }}
+                value={formData.maxQty}
+                onChangeText={(t) => handleChange("maxQty", t)}
+              />
+            </View>
+            <View style={styles.row}>
+              <CustomInput
+                label="Delivery Radius"
+                placeholder="10"
+                icon="map-pin"
+                suffix="km"
+                keyboardType="numeric"
+                style={{ flex: 1, marginRight: theme.SPACING.md }}
+                value={formData.deliveryRadius}
+                onChangeText={(t) => handleChange("deliveryRadius", t)}
+              />
+              <CustomInput
+                label="Delivery Charge"
+                placeholder="30"
+                icon="truck"
+                prefix="₹"
+                keyboardType="numeric"
+                style={{ flex: 1 }}
+                value={formData.delivery_charge}
+                onChangeText={(t) => handleChange("delivery_charge", t)}
+              />
+            </View>
+          </View>
+
+          {/* Bulk Pricing Section */}
+          <View style={styles.cardSection}>
+            <View style={styles.cardHeader}>
+              <Feather name="trending-down" size={20} color={theme.COLORS.primary} />
+              <StyledText variant="sectionHeader" bold>Bulk Pricing (Optional)</StyledText>
+            </View>
+
+            {formData.bulkPricing.map((tier, index) => (
+              <View key={index} style={styles.bulkTierCard}>
+                <View style={styles.tierInfo}>
+                  <StyledText variant="bodySecondary" bold color={theme.COLORS.primary}>
+                    {tier.min}{tier.max ? `-${tier.max}` : '+'} {formData.unitType}
+                  </StyledText>
+                  <StyledText variant="bodyPrimary" bold>₹{tier.price.toFixed(2)}</StyledText>
+                </View>
+                <TouchableOpacity onPress={() => removeTier(index)} style={styles.removeTierBtn}>
+                  <Feather name="x-circle" size={18} color={theme.COLORS.error} />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <View style={styles.addTierCard}>
+              <View style={styles.row}>
+                <CustomInput
+                  placeholder="Min"
+                  keyboardType="numeric"
+                  style={{ flex: 1, marginRight: theme.SPACING.sm, marginBottom: 0 }}
+                  inputStyle={{ height: 48 }}
+                  value={newTier.min}
+                  onChangeText={(t) => setNewTier(prev => ({ ...prev, min: t }))}
+                />
+                <CustomInput
+                  placeholder="Max"
+                  keyboardType="numeric"
+                  style={{ flex: 1, marginRight: theme.SPACING.sm, marginBottom: 0 }}
+                  inputStyle={{ height: 48 }}
+                  value={newTier.max}
+                  onChangeText={(t) => setNewTier(prev => ({ ...prev, max: t }))}
+                />
+                <CustomInput
+                  placeholder="Price"
+                  keyboardType="numeric"
+                  prefix="₹"
+                  style={{ flex: 1.5, marginRight: theme.SPACING.sm, marginBottom: 0 }}
+                  inputStyle={{ height: 48 }}
+                  value={newTier.price}
+                  onChangeText={(t) => setNewTier(prev => ({ ...prev, price: t }))}
+                />
+                <TouchableOpacity style={styles.addTierIconButton} onPress={addTier}>
+                  <Feather name="plus" size={22} color={theme.COLORS.white} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </ScrollView>
         <BottomNextBar
-          label={loading ? "Saving..." : "Next: Create Product"}
+          label={loading ? "Saving..." : "Create Product"}
           onPress={handleSubmit}
           disabled={loading}
           accessibilityHint="Saves this product and returns to previous screen"
@@ -200,95 +510,149 @@ const AddProductScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.white,
-    ...SHADOWS.light,
-  },
-  backButton: {
-    padding: SPACING.xs,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
+    backgroundColor: theme.COLORS.background,
   },
   scrollContent: {
-    padding: SPACING.lg,
+    paddingBottom: theme.SPACING.xxl,
   },
-  formGroup: {
-    marginBottom: SPACING.lg,
+  imageSection: {
+    padding: theme.SPACING.md,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
+  imagePickerHero: {
+    height: 240,
+    borderRadius: theme.BORDER_RADIUS.lg,
+    backgroundColor: theme.COLORS.white,
+    ...theme.SHADOWS.medium,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: theme.COLORS.white,
   },
-  input: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    fontSize: 16,
-    color: COLORS.textPrimary,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
+  imageOverlay: {
+    position: 'absolute',
+    bottom: theme.SPACING.md,
+    right: theme.SPACING.md,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.SPACING.md,
+    paddingVertical: theme.SPACING.sm,
+    borderRadius: theme.BORDER_RADIUS.full,
+    gap: 8,
+  },
+  imagePlaceholderHero: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.COLORS.primaryLight + '50',
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: theme.COLORS.primary,
+    borderRadius: theme.BORDER_RADIUS.lg,
+  },
+  cameraCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.SHADOWS.light,
+    marginBottom: theme.SPACING.md,
+  },
+  cardSection: {
+    backgroundColor: theme.COLORS.white,
+    marginHorizontal: theme.SPACING.md,
+    marginBottom: theme.SPACING.lg,
+    padding: theme.SPACING.lg,
+    borderRadius: theme.BORDER_RADIUS.lg,
+    ...theme.SHADOWS.light,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.SPACING.lg,
+    gap: theme.SPACING.sm,
   },
   row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
   },
-  submitButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.lg,
-    paddingVertical: SPACING.md,
-    alignItems: "center",
-    marginTop: SPACING.md,
-    ...SHADOWS.medium,
+  pillSelector: {
+    flexDirection: 'row',
+    backgroundColor: theme.COLORS.background,
+    padding: 4,
+    borderRadius: theme.BORDER_RADIUS.full,
+    marginBottom: 20,
   },
-  disabledButton: {
-    backgroundColor: COLORS.textSecondary,
-  },
-  submitButtonText: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  imagePickerContainer: {
-    width: "100%",
-    height: 200,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.md,
-    borderStyle: "dashed",
-    overflow: "hidden",
-  },
-  previewImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  imagePlaceholder: {
+  pill: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: 'row',
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: theme.BORDER_RADIUS.full,
   },
-  imagePlaceholderText: {
-    marginTop: SPACING.sm,
-    color: COLORS.textSecondary,
-    fontSize: 14,
+  pillActive: {
+    backgroundColor: theme.COLORS.primary,
+    ...theme.SHADOWS.light,
+  },
+  switchGroup: {
+    marginTop: 8,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  switchInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  bulkTierCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.COLORS.primaryLight + '30',
+    padding: 14,
+    borderRadius: theme.BORDER_RADIUS.md,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: theme.COLORS.primaryLight,
+  },
+  tierInfo: {
+    flex: 1,
+  },
+  removeTierBtn: {
+    padding: 10,
+  },
+  addTierCard: {
+    marginTop: 16,
+    backgroundColor: theme.COLORS.background,
+    padding: 14,
+    borderRadius: theme.BORDER_RADIUS.md,
+  },
+  addTierIconButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: theme.COLORS.primary,
+    borderRadius: theme.BORDER_RADIUS.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.SHADOWS.light,
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.COLORS.background,
+    padding: 14,
+    borderRadius: theme.BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: theme.COLORS.border,
+    minHeight: 48,
   },
 });
 

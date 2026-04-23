@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
-import { Pressable, Text, StyleSheet, Animated, View } from "react-native";
-import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, FONT_SIZES, FONT_WEIGHTS } from "../theme/theme";
+import { View, Pressable, StyleSheet, Animated, ActivityIndicator } from "react-native";
+import StyledText from "./StyledText";
+import { theme } from "../theme/theme";
 
 /**
  * PrimaryButton with variant support and press scale animation.
@@ -13,6 +14,7 @@ const PrimaryButton = ({
   style,
   variant = "solid",
   disabled = false,
+  loading = false,
   icon,
   accessibilityLabel,
   accessibilityHint,
@@ -21,6 +23,7 @@ const PrimaryButton = ({
   const scale = useRef(new Animated.Value(1)).current;
 
   const onPressIn = () => {
+    if (disabled || loading) return;
     Animated.spring(scale, {
       toValue: 0.97,
       useNativeDriver: true,
@@ -40,20 +43,24 @@ const PrimaryButton = ({
 
   const variantStyles = {
     solid: {
-      button: { backgroundColor: COLORS.primary },
-      text: { color: COLORS.white },
+      button: { backgroundColor: theme.COLORS.primary },
+      text: theme.COLORS.white,
+      loader: theme.COLORS.white,
     },
     outline: {
-      button: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: COLORS.primary },
-      text: { color: COLORS.primary },
+      button: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: theme.COLORS.primary },
+      text: theme.COLORS.primary,
+      loader: theme.COLORS.primary,
     },
     destructive: {
-      button: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: COLORS.error },
-      text: { color: COLORS.error },
+      button: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: theme.COLORS.error },
+      text: theme.COLORS.error,
+      loader: theme.COLORS.error,
     },
     ghost: {
       button: { backgroundColor: "transparent" },
-      text: { color: COLORS.primary },
+      text: theme.COLORS.primary,
+      loader: theme.COLORS.primary,
     },
   };
 
@@ -65,23 +72,33 @@ const PrimaryButton = ({
         style={[
           styles.button,
           v.button,
-          variant === "solid" && SHADOWS.medium,
-          disabled && styles.disabled,
+          variant === "solid" && theme.SHADOWS.medium,
+          (disabled || loading) && styles.disabled,
           style,
         ]}
         onPress={onPress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-        disabled={disabled}
+        disabled={disabled || loading}
         accessibilityRole={accessibilityRole}
         accessibilityLabel={accessibilityLabel || title}
         accessibilityHint={accessibilityHint}
+        accessibilityState={{ disabled: disabled || loading, busy: loading }}
       >
         <View style={styles.innerContent} accessible={true}>
-          {icon && icon}
-          <Text allowFontScaling={true} style={[styles.text, v.text, icon && { marginLeft: SPACING.sm }]}>
-            {title}
-          </Text>
+          {loading ? (
+            <ActivityIndicator size="small" color={v.loader} />
+          ) : (
+            <>
+              {icon && <View style={{ marginRight: theme.SPACING.sm }}>{icon}</View>}
+              <StyledText 
+                variant="button" 
+                color={v.text}
+              >
+                {title}
+              </StyledText>
+            </>
+          )}
         </View>
       </Pressable>
     </Animated.View>
@@ -90,25 +107,18 @@ const PrimaryButton = ({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 52,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.xl,
-    borderRadius: BORDER_RADIUS.md,
+    minHeight: 48, // Ensuring >= 44dp
+    paddingVertical: 14, // 12-16dp
+    paddingHorizontal: 18, // 16-20dp
+    borderRadius: theme.BORDER_RADIUS.md,
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
     width: "100%",
   },
   innerContent: {
-    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-  },
-  text: {
-    fontWeight: FONT_WEIGHTS.bold,
-    fontSize: FONT_SIZES.md,
-    letterSpacing: 0.5,
   },
   disabled: {
     opacity: 0.5,

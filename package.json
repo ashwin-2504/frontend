@@ -4,27 +4,43 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --tunnel",
-    "ios": "expo start --tunnel",
+    "start:lan": "node scripts/update-env-ip.js && expo start --lan",
+    "start:tunnel": "node scripts/update-env-ip.js && concurrently \"npx localtunnel --port 8081\" \"expo start\"",
+    "android": "npm run start:lan",
+    "ios": "npm run start:lan",
+    "update-ip": "node scripts/update-env-ip.js",
     "web": "expo start --web",
     "build:android": "eas build -p android --profile production",
     "update:production": "eas update --branch production"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "2.2.0",
+    "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-masked-view/masked-view": "~0.3.2",
+    "@react-navigation/bottom-tabs": "^7.15.9",
     "@react-navigation/elements": "^2.9.5",
     "@react-navigation/native": "^7.1.28",
     "@react-navigation/stack": "^7.7.2",
     "expo": "~54.0.33",
+    "expo-font": "~14.0.11",
     "expo-image-picker": "^17.0.10",
+    "expo-location": "~19.0.8",
     "expo-status-bar": "~3.0.9",
     "expo-updates": "~29.0.16",
+    "firebase": "^12.12.0",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-safe-area-context": "5.6.2",
-    "react-native-screens": "~4.16.0"
+    "react-native-screens": "~4.16.0",
+    "react-native-webview": "13.15.0"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "concurrently": "^9.2.1",
+    "localtunnel": "^2.0.2",
+    "typescript": "~5.9.2"
+  }
 }

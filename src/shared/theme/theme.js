@@ -17,20 +17,26 @@ export const COLORS = {
 };
 
 export const STATUS_COLORS = {
-  PENDING:   { bg: "#FFF3E0", text: "#e60000", icon: "clock" },
-  SHIPPED:   { bg: "#E3F2FD", text: "#15ff00", icon: "truck" },
-  DELIVERED: { bg: "#E8F5E9", text: "#2E7D32", icon: "check-circle" },
+  PENDING:   { bg: "#FFF4E5", text: "#FF8C00", icon: "clock" },
+
+  CONFIRMED: { bg: "#E3F2FD", text: "#1976D2", icon: "check-circle" },
+  SHIPPED:   { bg: "#E3F2FD", text: "#1976D2", icon: "truck" },
+
+  DELIVERED: { bg: "#E8F5E9", text: "#2E7D32", icon: "package" },
+
   CANCELLED: { bg: "#FFEBEE", text: "#C62828", icon: "x-circle" },
 };
 
+import { ms } from '../utils/responsive';
+
 export const FONT_SIZES = {
-  xs: 11,
-  sm: 13,
-  md: 15,
-  lg: 18,
-  xl: 22,
-  xxl: 28,
-  hero: 34,
+  caption: ms(14),
+  bodySecondary: ms(16),
+  bodyPrimary: ms(18),
+  button: ms(18),
+  sectionHeader: ms(22),
+  screenTitle: ms(26),
+  display: ms(32),
 };
 
 export const FONT_WEIGHTS = {
@@ -38,22 +44,68 @@ export const FONT_WEIGHTS = {
   medium: "500",
   semibold: "600",
   bold: "700",
-  heavy: "800",
 };
 
 export const LINE_HEIGHTS = {
-  tight: 1.2,
-  normal: 1.5,
-  relaxed: 1.7,
+  caption: ms(18),
+  bodySecondary: ms(22),
+  bodyPrimary: ms(24),
+  button: ms(22),
+  sectionHeader: ms(28),
+  screenTitle: ms(32),
+  display: ms(38),
+};
+
+export const TYPOGRAPHY = {
+  display: {
+    fontSize: FONT_SIZES.display,
+    lineHeight: LINE_HEIGHTS.display,
+    fontWeight: FONT_WEIGHTS.semibold,
+  },
+  screenTitle: {
+    fontSize: FONT_SIZES.screenTitle,
+    lineHeight: LINE_HEIGHTS.screenTitle,
+    fontWeight: FONT_WEIGHTS.semibold,
+  },
+  sectionHeader: {
+    fontSize: FONT_SIZES.sectionHeader,
+    lineHeight: LINE_HEIGHTS.sectionHeader,
+    fontWeight: FONT_WEIGHTS.semibold,
+  },
+  bodyPrimary: {
+    fontSize: FONT_SIZES.bodyPrimary,
+    lineHeight: LINE_HEIGHTS.bodyPrimary,
+    fontWeight: FONT_WEIGHTS.regular,
+  },
+  bodySecondary: {
+    fontSize: FONT_SIZES.bodySecondary,
+    lineHeight: LINE_HEIGHTS.bodySecondary,
+    fontWeight: FONT_WEIGHTS.regular,
+  },
+  label: {
+    fontSize: FONT_SIZES.bodySecondary,
+    lineHeight: LINE_HEIGHTS.bodySecondary,
+    fontWeight: FONT_WEIGHTS.medium,
+  },
+  caption: {
+    fontSize: FONT_SIZES.caption,
+    lineHeight: LINE_HEIGHTS.caption,
+    fontWeight: FONT_WEIGHTS.regular,
+  },
+  button: {
+    fontSize: FONT_SIZES.button,
+    lineHeight: LINE_HEIGHTS.button,
+    fontWeight: FONT_WEIGHTS.medium,
+  },
 };
 
 export const SPACING = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xs: ms(4),
+  sm: ms(8),
+  md: ms(16),
+  lg: ms(24),
+  xl: ms(32),
+  xxl: ms(48),
 };
 
 export const BORDER_RADIUS = {
@@ -87,3 +139,16 @@ export const SHADOWS = {
     elevation: 8,
   },
 };
+export const theme = {
+  COLORS,
+  STATUS_COLORS,
+  FONT_SIZES,
+  FONT_WEIGHTS,
+  LINE_HEIGHTS,
+  TYPOGRAPHY,
+  SPACING,
+  BORDER_RADIUS,
+  SHADOWS,
+};
+
+export default theme;

@@ -1,7 +1,6 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -10,9 +9,11 @@ import {
   RefreshControl,
   Pressable,
 } from "react-native";
+import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
-import { COLORS, SPACING, SHADOWS, BORDER_RADIUS } from "../../shared/theme/theme";
+import { theme } from "../../shared/theme/theme";
+import StyledText from "../../shared/components/StyledText";
 import StatsCard from "../../shared/components/StatsCard";
 import { Feather } from "@expo/vector-icons";
 import apiService from "../../shared/services/apiService";
@@ -20,10 +21,12 @@ import ProductItem from "../components/ProductItem";
 import OrderItem from "../components/OrderItem";
 import { useAuth } from "../../shared/context/AuthContext";
 import { TopBar } from "../../shared/components/ScreenActions";
+import ErrorBanner from "../../shared/components/ErrorBanner";
+import EmptyState from "../../shared/components/EmptyState";
 import { announceMessage } from "../../shared/utils/accessibility";
 
 const SellerDashboard = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, logout, confirmFarmLocation, updateUserLocation } = useAuth();
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
     products: "0",
@@ -33,17 +36,49 @@ const SellerDashboard = ({ navigation }) => {
   });
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useFocusEffect(
     useCallback(() => {
-      fetchDashboardData();
-    }, [])
+      if (user?.id) {
+        fetchDashboardData();
+      }
+    }, [user?.id])
   );
 
+  useEffect(() => {
+    if (user?.id) {
+      initLocation();
+    }
+  }, [user?.id]);
+
+  const initLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        await updateUserLocation({
+          lat: location.coords.latitude,
+          lng: location.coords.longitude,
+          accuracy: location.coords.accuracy,
+        });
+      }
+    } catch (error) {
+      console.warn("SellerDashboard initLocation failed:", error);
+    }
+  };
+
   const fetchDashboardData = async () => {
+    if (!user?.id || user?.role !== "seller") {
+      setErrorMessage("Please sign in again to load your seller dashboard.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const sellerId = user?.id || "seller_123";
+      const sellerId = user.id;
       
       // Fetch stats, products, and orders in parallel
       const [statsData, productsData, ordersData] = await Promise.all([
@@ -53,17 +88,21 @@ const SellerDashboard = ({ navigation }) => {
       ]);
       
       setStats({
-        products: statsData.productsCount.toString(),
-        orders: statsData.ordersCount.toString(),
-        revenue: `₹${statsData.revenue}`,
-        pending: statsData.pendingOrdersCount.toString(),
+        products: statsData.productsCount?.toString() || "0",
+        orders: statsData.ordersCount?.toString() || "0",
+        revenue: `₹${statsData.revenue || 0}`,
+        pending: statsData.pendingOrdersCount?.toString() || "0",
       });
       
-      setProducts(productsData);
-      setOrders(ordersData);
+      setProducts(productsData || []);
+      setOrders(ordersData || []);
+      setErrorMessage("");
     } catch (error) {
       console.error("Failed to fetch seller dashboard data:", error);
-      announceMessage("Could not load dashboard details. Pull down to retry.");
+      const message = (error?.message || "Could not load dashboard details. Pull down to retry.")
+        .replace(/^\[[^\]]+\]\s*/, "");
+      setErrorMessage(message);
+      announceMessage("Could not load dashboard details. Use retry to try again.");
     } finally {
       setLoading(false);
     }
@@ -73,41 +112,96 @@ const SellerDashboard = ({ navigation }) => {
     navigation.navigate("AddProduct");
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Login" }],
+    });
+  };
+
+  const handleSetFarmLocation = () => {
+    Alert.alert(
+      "Set Farm Location",
+      "Confirm current GPS coordinates as your permanent Farm Location? Make sure you are at your farm right now.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Set Location", 
+          onPress: async () => {
+            setLoading(true);
+            try {
+              let locationToUse = user?.lastKnownLocation;
+              
+              // If missing, try one fresh fetch
+              if (!locationToUse) {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status === "granted") {
+                  const location = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.High, // Higher accuracy for farm set
+                  });
+                  locationToUse = {
+                    lat: location.coords.latitude,
+                    lng: location.coords.longitude,
+                    accuracy: location.coords.accuracy,
+                  };
+                  await updateUserLocation(locationToUse);
+                }
+              }
+
+              if (!locationToUse) {
+                throw new Error("Wait for GPS signal before setting location.");
+              }
+              
+              await confirmFarmLocation(locationToUse);
+              Alert.alert("Success", "Farm location set. Your products are now visible to nearby buyers!");
+            } catch (error) {
+              Alert.alert("Location Error", error.message || "Could not set farm location. Try again with a better signal.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <TopBar
-        title="Seller Dashboard"
-        onBack={() => navigation.navigate("Login")}
-        backHint="Return to login screen"
+        title="Dashboard"
         rightNode={
           <Pressable
             style={styles.iconButton}
-            onPress={() =>
-              Alert.alert("Logout", "Are you sure you want to logout?", [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Logout",
-                  style: "destructive",
-                  onPress: () =>
-                    navigation.reset({
-                      index: 0,
-                      routes: [{ name: "Login" }],
-                    }),
-                },
-              ])
-            }
+            onPress={() => navigation.navigate("Profile")}
             accessibilityRole="button"
-            accessibilityLabel="Logout"
-            accessibilityHint="Signs out and goes back to login"
+            accessibilityLabel="View Profile"
+            accessibilityHint="Opens your profile and account settings"
           >
-            <Feather name="log-out" size={20} color={COLORS.textSecondary} />
+            <Feather name="user" size={20} color={theme.COLORS.textSecondary} />
           </Pressable>
         }
       />
 
+      {!!errorMessage && (
+        <View style={styles.errorSection}>
+          <ErrorBanner message={errorMessage} />
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={fetchDashboardData}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading dashboard"
+            accessibilityHint="Attempts to fetch seller stats, products, and orders again"
+          >
+            <Feather name="refresh-cw" size={16} color={theme.COLORS.white} style={{ marginRight: 8 }} />
+            <StyledText variant="button" color={theme.COLORS.white}>Retry</StyledText>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={theme.COLORS.primary} />
         </View>
       )}
 
@@ -118,17 +212,27 @@ const SellerDashboard = ({ navigation }) => {
           <RefreshControl refreshing={loading} onRefresh={fetchDashboardData} />
         }
       >
-        <View style={styles.welcomeSection}>
-          <View style={styles.welcomeHeader}>
-            <View style={styles.welcomeIconContainer}>
-              <Feather name="user" size={24} color={COLORS.white} />
-            </View>
-            <View>
-              <Text allowFontScaling={true} style={styles.welcomeTitle}>Seller Dashboard</Text>
-              <Text allowFontScaling={true} style={styles.welcomeSubtitle}>Manage your products and orders</Text>
-            </View>
-          </View>
-        </View>
+        {(!user?.farmLocation?.lat || !user?.farmLocation?.lng) && (
+            <TouchableOpacity 
+                style={styles.locationWarning} 
+                onPress={handleSetFarmLocation}
+                activeOpacity={0.8}
+            >
+                <View style={styles.warningIcon}>
+                    <Feather name="map-pin" size={20} color={theme.COLORS.error} />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <StyledText variant="bodyPrimary" bold color={theme.COLORS.error}>
+                        Farm Location Missing
+                    </StyledText>
+                    <StyledText variant="caption" color={theme.COLORS.textSecondary}>
+                        Setup your farm location in Profile to make your products visible to nearby buyers.
+                    </StyledText>
+                </View>
+                <Feather name="chevron-right" size={18} color={theme.COLORS.error} />
+            </TouchableOpacity>
+        )}
+
 
         <View style={styles.statsGrid}>
           <StatsCard
@@ -160,29 +264,33 @@ const SellerDashboard = ({ navigation }) => {
 
         <View style={styles.sectionHeader}>
           <View style={styles.titleWithIcon}>
-            <Feather name="box" size={18} color={COLORS.primary} style={styles.sectionIcon} />
-            <Text style={styles.sectionTitle}>My Products ({stats.products})</Text>
+            <Feather name="box" size={18} color={theme.COLORS.primary} style={styles.sectionIcon} />
+            <StyledText variant="sectionHeader" bold>My Products ({stats.products})</StyledText>
           </View>
           <TouchableOpacity 
             style={styles.addButton}
             onPress={handleAddProduct}
           >
-            <Feather name="plus" size={16} color={COLORS.white} style={{ marginRight: 4 }} />
-            <Text style={styles.addButtonText}>Add Product</Text>
+            <Feather name="plus" size={16} color={theme.COLORS.white} style={{ marginRight: 4 }} />
+            <StyledText variant="button" color={theme.COLORS.white}>Add Product</StyledText>
           </TouchableOpacity>
         </View>
 
         {loading && products.length === 0 ? (
-          <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.md }} />
+          <ActivityIndicator size="small" color={theme.COLORS.primary} style={{ marginVertical: theme.SPACING.md }} />
         ) : products.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No products yet. Add your first product!</Text>
-          </View>
+          <EmptyState 
+            icon="plus-circle"
+            title="No Products Found"
+            subtitle="You haven't added any products yet. Start selling by adding your first product!"
+            ctaText="Add First Product"
+            onPress={handleAddProduct}
+          />
         ) : (
           <View style={styles.productList}>
             {products.slice(0, 5).map(product => (
               <ProductItem
-                key={product.id}
+                key={product.productId}
                 product={product}
                 onPress={() => navigation.navigate("EditProduct", { product })}
               />
@@ -192,7 +300,7 @@ const SellerDashboard = ({ navigation }) => {
                 style={styles.viewMoreButton}
                 onPress={() => navigation.navigate("SellerProducts")}
               >
-                <Text style={styles.viewMoreText}>View All Products</Text>
+                <StyledText variant="button" color={theme.COLORS.primary}>View All Products</StyledText>
               </TouchableOpacity>
             )}
           </View>
@@ -200,22 +308,24 @@ const SellerDashboard = ({ navigation }) => {
 
         <View style={styles.sectionHeader}>
           <View style={styles.titleWithIcon}>
-            <Feather name="list" size={18} color={COLORS.primary} style={styles.sectionIcon} />
-            <Text style={styles.sectionTitle}>Recent Orders ({stats.orders})</Text>
+            <Feather name="list" size={18} color={theme.COLORS.primary} style={styles.sectionIcon} />
+            <StyledText variant="sectionHeader" bold>Recent Orders ({stats.orders})</StyledText>
           </View>
         </View>
 
         {loading && orders.length === 0 ? (
-          <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.md }} />
+          <ActivityIndicator size="small" color={theme.COLORS.primary} style={{ marginVertical: theme.SPACING.md }} />
         ) : orders.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No orders yet</Text>
-          </View>
+          <EmptyState 
+            icon="clipboard"
+            title="No Orders Yet"
+            subtitle="Your orders will appear here once customers start buying your products."
+          />
         ) : (
           <View style={styles.orderList}>
             {orders.slice(0, 5).map(order => (
               <OrderItem 
-                key={order.id} 
+                key={order.orderId} 
                 order={order} 
                 onPress={() => navigation.navigate("SellerOrderDetail", { order })}
               />
@@ -225,7 +335,7 @@ const SellerDashboard = ({ navigation }) => {
                 style={styles.viewMoreButton}
                 onPress={() => navigation.navigate("SellerOrders")}
               >
-                <Text style={styles.viewMoreText}>View All Orders</Text>
+                <StyledText variant="button" color={theme.COLORS.primary}>View All Orders</StyledText>
               </TouchableOpacity>
             )}
           </View>
@@ -238,43 +348,34 @@ const SellerDashboard = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.white,
-    ...SHADOWS.light,
-  },
-  logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  logoIcon: {
-    marginRight: 8,
-  },
-  logoText: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: COLORS.primary,
+    backgroundColor: theme.COLORS.background,
   },
   iconButton: {
-    padding: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
+    minWidth: 44,
+    minHeight: 44,
+    borderRadius: theme.BORDER_RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
+    borderColor: theme.COLORS.border,
+    backgroundColor: theme.COLORS.white,
     justifyContent: "center",
     alignItems: "center",
   },
-  logoutText: {
-    display: "none",
-  },
   scrollContent: {
-    padding: SPACING.lg,
+    padding: theme.SPACING.lg,
+  },
+  errorSection: {
+    paddingHorizontal: theme.SPACING.lg,
+    paddingTop: theme.SPACING.md,
+  },
+  retryButton: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.COLORS.primary,
+    paddingHorizontal: theme.SPACING.md,
+    paddingVertical: theme.SPACING.sm,
+    borderRadius: theme.BORDER_RADIUS.md,
+    marginBottom: theme.SPACING.md,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -283,49 +384,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  welcomeSection: {
-    marginBottom: SPACING.lg,
-  },
-  welcomeHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  welcomeIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: SPACING.md,
-  },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: COLORS.textPrimary,
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-  },
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: SPACING.xl,
+    marginBottom: theme.SPACING.xl,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: SPACING.md,
-    marginTop: SPACING.sm,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
+    marginBottom: theme.SPACING.md,
+    marginTop: theme.SPACING.sm,
   },
   titleWithIcon: {
     flexDirection: "row",
@@ -335,57 +405,59 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   addButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: theme.COLORS.primary,
+    paddingHorizontal: theme.SPACING.md,
+    paddingVertical: theme.SPACING.sm,
+    borderRadius: theme.BORDER_RADIUS.md,
     flexDirection: "row",
     alignItems: "center",
   },
-  addButtonText: {
-    color: COLORS.white,
-    fontWeight: "700",
-    fontSize: 14,
-  },
   emptyState: {
-    backgroundColor: COLORS.white,
-    padding: SPACING.xl,
-    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: theme.COLORS.white,
+    padding: theme.SPACING.xl,
+    borderRadius: theme.BORDER_RADIUS.lg,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.COLORS.border,
     borderStyle: "dashed",
-    marginBottom: SPACING.lg,
-  },
-  emptyStateText: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    textAlign: "center",
+    marginBottom: theme.SPACING.lg,
   },
   productList: {
-    marginBottom: SPACING.md,
+    marginBottom: theme.SPACING.md,
   },
   orderList: {
-    marginBottom: SPACING.md,
+    marginBottom: theme.SPACING.md,
   },
   viewMoreButton: {
     alignItems: 'center',
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: theme.SPACING.sm,
+    backgroundColor: theme.COLORS.white,
+    borderRadius: theme.BORDER_RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.primary,
-    marginTop: -SPACING.xs,
-    marginBottom: SPACING.md,
+    borderColor: theme.COLORS.primary,
+    marginTop: -theme.SPACING.xs,
+    marginBottom: theme.SPACING.md,
   },
-  viewMoreText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: '700',
+  locationWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    padding: 16,
+    borderRadius: theme.BORDER_RADIUS.lg,
+    marginBottom: theme.SPACING.lg,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+    ...theme.SHADOWS.light,
   },
-  productCountText: {
-    display: 'none',
+  warningIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
 });
 

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "BharatMandi",
-    "slug": "Native",
+    "slug": "bharat-mandi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,7 +21,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Native"
+      "package": "com.bharatmandi.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -37,6 +37,9 @@
     "updates": {
       "url": "https://u.expo.dev/52363cdb-8ade-4fbc-9f8b-3a1136837e5b",
       "enableBsdiffPatchSupport": true
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

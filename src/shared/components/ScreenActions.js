@@ -1,26 +1,32 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { BORDER_RADIUS, COLORS, FONT_SIZES, FONT_WEIGHTS, SHADOWS, SPACING } from "../theme/theme";
+import StyledText from "./StyledText";
+import { theme } from "../theme/theme";
 
 export const TopBar = ({ title, onBack, backLabel = "Back", backHint = "Go to previous screen", rightNode }) => {
   return (
     <View style={styles.header}>
-      <Pressable
-        style={styles.backButton}
-        onPress={onBack}
-        accessibilityRole="button"
-        accessibilityLabel={backLabel}
-        accessibilityHint={backHint}
-      >
-        <Feather name="arrow-left-circle" size={24} color={COLORS.textPrimary} />
-        <Text allowFontScaling={true} style={styles.backText}>
-          Back
-        </Text>
-      </Pressable>
-      <Text allowFontScaling={true} style={styles.headerTitle} accessibilityRole="header">
+      {onBack ? (
+        <Pressable
+          style={styles.backButton}
+          onPress={onBack}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={backLabel}
+          accessibilityHint={backHint}
+        >
+          <Feather name="chevron-left" size={28} color={theme.COLORS.primary} />
+          <StyledText variant="button" color={theme.COLORS.primary} bold>
+            Back
+          </StyledText>
+        </Pressable>
+      ) : (
+        <View style={styles.backButtonSpacer} />
+      )}
+      <StyledText variant="screenTitle" style={styles.headerTitle} accessibilityRole="header" bold>
         {title}
-      </Text>
+      </StyledText>
       <View style={styles.rightSlot}>{rightNode || null}</View>
     </View>
   );
@@ -32,21 +38,28 @@ export const BottomNextBar = ({
   onPress,
   accessibilityHint,
   disabled = false,
+  loading = false,
 }) => {
   return (
     <View style={styles.footer}>
       <Pressable
-        style={[styles.nextButton, disabled && styles.disabled]}
+        style={[styles.nextButton, (disabled || loading) && styles.disabled]}
         onPress={onPress}
-        disabled={disabled}
+        disabled={disabled || loading}
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityHint={accessibilityHint || "Move to next step"}
       >
-        <Text allowFontScaling={true} style={styles.nextText}>
-          {label}
-        </Text>
-        <Feather name={icon} size={20} color={COLORS.white} />
+        {loading ? (
+          <ActivityIndicator color={theme.COLORS.white} />
+        ) : (
+          <>
+            <StyledText variant="button" color={theme.COLORS.white} style={styles.nextText}>
+              {label}
+            </StyledText>
+            <Feather name={icon} size={20} color={theme.COLORS.white} />
+          </>
+        )}
       </Pressable>
     </View>
   );
@@ -54,67 +67,57 @@ export const BottomNextBar = ({
 
 const styles = StyleSheet.create({
   header: {
-    minHeight: 68,
+    minHeight: 70,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.border,
-    ...SHADOWS.light,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: theme.COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.COLORS.border,
+    ...theme.SHADOWS.light,
   },
   backButton: {
-    minWidth: 88,
-    minHeight: 44,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.primaryLight,
-    paddingHorizontal: SPACING.sm,
+    minWidth: 80,
+    minHeight: 44, // Touch target
+    borderRadius: theme.BORDER_RADIUS.md,
+    paddingHorizontal: 8,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     gap: 6,
-    backgroundColor: COLORS.white,
   },
-  backText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
+  backButtonSpacer: {
+    minWidth: 80,
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
-    fontSize: FONT_SIZES.lg,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
-    marginHorizontal: SPACING.sm,
   },
   rightSlot: {
-    minWidth: 88,
+    minWidth: 80,
     alignItems: "flex-end",
   },
   footer: {
-    padding: SPACING.md,
-    backgroundColor: COLORS.white,
+    padding: 16,
+    backgroundColor: theme.COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: theme.COLORS.border,
+    ...theme.SHADOWS.medium,
   },
   nextButton: {
-    minHeight: 52,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.primary,
+    minHeight: 52, // Touch target
+    borderRadius: theme.BORDER_RADIUS.md,
+    backgroundColor: theme.COLORS.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: SPACING.sm,
-    ...SHADOWS.light,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 12,
   },
   nextText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZES.md,
-    fontWeight: FONT_WEIGHTS.bold,
+    marginRight: 4,
   },
   disabled: {
     opacity: 0.5,

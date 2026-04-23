@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS } from '../../shared/theme/theme';
+import { theme } from '../../shared/theme/theme';
+import StyledText from '../../shared/components/StyledText';
+import { formatFreshness } from '../../shared/utils/formatters';
 
 /**
  * ProductItem with context-aware stock display.
@@ -9,15 +11,15 @@ import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS } fro
  */
 const ProductItem = ({ product, onPress, context = "seller" }) => {
   const getStockDisplay = () => {
-    const qty = product.stock_quantity;
+    const qty = product.stockQty;
     if (context === "buyer") {
-      if (qty <= 0) return { text: "Out of Stock", color: COLORS.error, bg: "#FFEBEE" };
-      if (qty < 10) return { text: "Low Stock", color: COLORS.warning, bg: "#FFF3E0" };
-      return { text: "In Stock", color: COLORS.success, bg: "#E8F5E9" };
+      if (qty <= 0) return { text: "Out of Stock", color: theme.COLORS.error, bg: "#FFEBEE" };
+      if (qty < 10) return { text: "Low Stock", color: theme.COLORS.warning, bg: "#FFF3E0" };
+      return { text: "In Stock", color: theme.COLORS.success, bg: "#E8F5E9" };
     }
     // Seller — show exact count
-    if (qty < 5) return { text: `Stock: ${qty}`, color: COLORS.error, bg: "#FFEBEE" };
-    return { text: `Stock: ${qty}`, color: COLORS.textSecondary, bg: COLORS.background };
+    if (qty < 5) return { text: `Stock: ${qty}`, color: theme.COLORS.error, bg: "#FFEBEE" };
+    return { text: `Stock: ${qty}`, color: theme.COLORS.textSecondary, bg: theme.COLORS.background };
   };
 
   const stock = getStockDisplay();
@@ -27,31 +29,64 @@ const ProductItem = ({ product, onPress, context = "seller" }) => {
       style={styles.container}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${product.name}, ${product.category}, price rupees ${product.price}`}
+      accessibilityLabel={`${product.name}, ${product.category}, ${product.grade ? 'grade ' + product.grade : ''}, price starting from rupees ${product.price}. Status: ${stock.text}`}
       accessibilityHint="Opens product details"
     >
       <View style={styles.imageContainer}>
-        {product.image_url ? (
-          <Image source={{ uri: product.image_url }} style={styles.image} />
+        {product.imageUrls?.[0] ? (
+          <Image source={{ uri: product.imageUrls[0] }} style={styles.image} />
         ) : (
           <View style={styles.placeholderImage}>
-            <Feather name="box" size={24} color={COLORS.textSecondary} />
+            <Feather name="box" size={24} color={theme.COLORS.textSecondary} />
           </View>
         )}
       </View>
       <View style={styles.details}>
-        <Text allowFontScaling={true} style={styles.name} numberOfLines={1}>{product.name}</Text>
-        <Text allowFontScaling={true} style={styles.category}>{product.category}</Text>
+        <StyledText variant="bodyPrimary" bold numberOfLines={1}>{product.name}</StyledText>
+        <View style={styles.badgeRow}>
+          <View style={styles.trustBadge}>
+            <StyledText variant="caption" bold color={theme.COLORS.primary}>
+              {formatFreshness(product.harvestDate)}
+            </StyledText>
+          </View>
+          <View style={[styles.trustBadge, { backgroundColor: theme.COLORS.surface }]}>
+            <StyledText variant="caption" bold color={theme.COLORS.secondary}>
+              GR {product.grade || 'A'}
+            </StyledText>
+          </View>
+          {product.isOrganic && (
+            <Feather name="shield" size={12} color={theme.COLORS.success} style={{ marginLeft: 4 }} />
+          )}
+        </View>
+        
+        {product.distance !== undefined && (
+          <View style={styles.distanceContainer}>
+            <Feather name="map-pin" size={10} color={theme.COLORS.textSecondary} />
+            <StyledText variant="caption" color={theme.COLORS.textSecondary} style={{ marginLeft: 2 }}>
+              {product.distance.toFixed(1)} km
+            </StyledText>
+          </View>
+        )}
         <View style={styles.footer}>
-          <Text allowFontScaling={true} style={styles.price}>₹{product.price}</Text>
+          <View>
+            <StyledText variant="bodyPrimary" bold color={theme.COLORS.primary}>
+              ₹{product.bulkPricing?.length > 0 
+                ? `${Math.min(...product.bulkPricing.map(p => p.price))}-${product.price}`
+                : product.price
+              }
+            </StyledText>
+            <StyledText variant="caption" color={theme.COLORS.textSecondary}>
+              per {product.unitType || 'unit'}
+            </StyledText>
+          </View>
           <View style={[styles.stockBadge, { backgroundColor: stock.bg }]}>
-            <Text allowFontScaling={true} style={[styles.stockText, { color: stock.color }]}>
+            <StyledText variant="caption" bold color={stock.color}>
               {stock.text}
-            </Text>
+            </StyledText>
           </View>
         </View>
       </View>
-      <Feather name="chevron-right" size={20} color={COLORS.border} />
+      <Feather name="chevron-right" size={20} color={theme.COLORS.border} />
     </Pressable>
   );
 };
@@ -60,22 +95,22 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
-    padding: SPACING.md,
+    backgroundColor: theme.COLORS.white,
+    padding: theme.SPACING.md,
     minHeight: 72,
-    borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.light,
+    borderRadius: theme.BORDER_RADIUS.lg,
+    marginBottom: theme.SPACING.md,
+    ...theme.SHADOWS.light,
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
+    borderColor: theme.COLORS.primaryLight,
   },
   imageContainer: {
     width: 60,
     height: 60,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: theme.BORDER_RADIUS.md,
     overflow: 'hidden',
-    backgroundColor: COLORS.background,
-    marginRight: SPACING.md,
+    backgroundColor: theme.COLORS.background,
+    marginRight: theme.SPACING.md,
   },
   image: {
     width: '100%',
@@ -90,35 +125,33 @@ const styles = StyleSheet.create({
   details: {
     flex: 1,
   },
-  name: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
-  },
-  category: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6,
-  },
-  price: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: FONT_WEIGHTS.heavy,
-    color: COLORS.primary,
+    marginTop: 8,
   },
   stockBadge: {
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: theme.BORDER_RADIUS.full,
   },
-  stockText: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: FONT_WEIGHTS.semibold,
+  badgeRow: {
+    flexDirection: 'row',
+    marginTop: 4,
+    alignItems: 'center',
+    gap: 4,
+  },
+  trustBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    backgroundColor: theme.COLORS.primaryLight,
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
   },
 });
 

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -9,7 +8,8 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { COLORS, SPACING, SHADOWS, BORDER_RADIUS } from "../theme/theme";
+import { theme } from "../theme/theme";
+import StyledText from "../components/StyledText";
 import CustomInput from "../components/CustomInput";
 import RoleSelector from "../components/RoleSelector";
 import { useAuth } from "../context/AuthContext";
@@ -18,14 +18,17 @@ import ErrorBanner from "../components/ErrorBanner";
 import { announceMessage } from "../utils/accessibility";
 
 const RegisterScreen = ({ navigation }) => {
-  const [role, setRole] = useState("Farmer");
-  const { login } = useAuth();
+  const [role, setRole] = useState("seller");
+  const { register } = useAuth();
   const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
-    address: "",
+    addressLine: "",
+    city: "",
+    pincode: "",
     password: "",
   });
 
@@ -33,20 +36,47 @@ const RegisterScreen = ({ navigation }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleRegister = () => {
-    if (!formData.fullName || !formData.phone || !formData.password) {
-      const message = "Please fill your name, phone number, and password before continuing.";
+  const handleRegister = async () => {
+    if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.addressLine || !formData.pincode) {
+      const message = "Please fill all required fields, including street address and pincode.";
       setErrorMessage(message);
       announceMessage(message);
       return;
     }
+
+    if (formData.pincode.length !== 6) {
+      const message = "Pincode must be exactly 6 digits.";
+      setErrorMessage(message);
+      announceMessage(message);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      const message = "Password must be at least 6 characters long.";
+      setErrorMessage(message);
+      announceMessage(message);
+      return;
+    }
+
     setErrorMessage("");
-    console.log("Registering as", role, formData);
-    login(role);
-    if (role === "Farmer") {
-      navigation.reset({ index: 0, routes: [{ name: "SellerDashboard" }] });
-    } else {
-      navigation.reset({ index: 0, routes: [{ name: "BuyerDashboard" }] });
+    setLoading(true);
+    try {
+      console.log("Registering as", role, formData.email);
+      const addressData = {
+        addressLine: formData.addressLine,
+        city: formData.city,
+        pincode: formData.pincode
+      };
+      await register(formData.email, formData.password, role, formData.fullName, formData.phone, addressData);
+      
+      if (role === "seller" || role === "customer") {
+        navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+      }
+    } catch (error) {
+      setErrorMessage(error.message || "Failed to create account.");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -65,9 +95,13 @@ const RegisterScreen = ({ navigation }) => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.card, SHADOWS.medium]}>
-            <Text allowFontScaling={true} style={styles.cardTitle}>Create Account</Text>
-            <Text allowFontScaling={true} style={styles.instruction}>Join India's largest farming community</Text>
+          <View style={[styles.card, theme.SHADOWS.medium]}>
+            <StyledText variant="screenTitle" bold style={{ textAlign: "center", marginBottom: 4 }}>
+              Create Account
+            </StyledText>
+            <StyledText variant="bodySecondary" color={theme.COLORS.textSecondary} style={{ textAlign: "center", marginBottom: 16 }}>
+              Join India's largest farming community
+            </StyledText>
             <ErrorBanner message={errorMessage} />
 
             <RoleSelector selectedRole={role} onRoleChange={setRole} />
@@ -96,13 +130,30 @@ const RegisterScreen = ({ navigation }) => {
               accessibilityHint="Enter your 10-digit phone number"
             />
             <CustomInput 
-              label="Address" 
-              placeholder="Your location" 
-              multiline 
-              value={formData.address}
-              onChangeText={(text) => handleInputChange("address", text)}
-              accessibilityHint="Enter your village or address"
+              label="Street Address / Village" 
+              placeholder="e.g. 123 Farm Road or Village Name" 
+              value={formData.addressLine}
+              onChangeText={(text) => handleInputChange("addressLine", text)}
+              accessibilityHint="Enter your street level address"
             />
+            <View style={{ flexDirection: 'row', gap: theme.SPACING.md }}>
+              <CustomInput 
+                label="City" 
+                placeholder="City" 
+                style={{ flex: 1 }}
+                value={formData.city}
+                onChangeText={(text) => handleInputChange("city", text)}
+              />
+              <CustomInput 
+                label="Pincode" 
+                placeholder="400001" 
+                keyboardType="numeric"
+                maxLength={6}
+                style={{ flex: 1 }}
+                value={formData.pincode}
+                onChangeText={(text) => handleInputChange("pincode", text)}
+              />
+            </View>
             <CustomInput 
               label="Password" 
               placeholder="........" 
@@ -120,15 +171,18 @@ const RegisterScreen = ({ navigation }) => {
               accessibilityLabel="Go to login"
               accessibilityHint="Return to sign in screen"
             >
-              <Text style={styles.linkText}>
-                Already have an account? <Text style={styles.linkTextBold}>Login</Text>
-              </Text>
+              <StyledText variant="bodySecondary" color={theme.COLORS.textSecondary}>
+                Already have an account? <StyledText bold color={theme.COLORS.primary}>Login</StyledText>
+              </StyledText>
             </TouchableOpacity>
           </View>
         </ScrollView>
         <BottomNextBar
-          label="Next: Create Account"
+          label={loading ? "Creating Account..." : "Create Account"}
           onPress={handleRegister}
+          disabled={loading}
+          loading={loading}
+          icon="user-plus"
           accessibilityHint="Creates account and opens your dashboard"
         />
       </KeyboardAvoidingView>
@@ -139,7 +193,7 @@ const RegisterScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.COLORS.background,
   },
   flex: {
     flex: 1,
@@ -147,42 +201,20 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    padding: SPACING.md,
-    paddingVertical: SPACING.lg,
+    padding: theme.SPACING.md,
+    paddingVertical: theme.SPACING.lg,
   },
   card: {
-    backgroundColor: COLORS.white,
-    padding: SPACING.lg,
-    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: theme.COLORS.white,
+    padding: 24,
+    borderRadius: theme.BORDER_RADIUS.xl,
     width: "100%",
   },
-  cardTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-    textAlign: "center",
-  },
-  instruction: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: "center",
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.sm,
-  },
-  button: {
-    marginTop: SPACING.lg,
-  },
   linkButton: {
-    marginTop: SPACING.lg,
+    marginTop: 24,
     alignItems: "center",
-  },
-  linkText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  linkTextBold: {
-    color: COLORS.primary,
-    fontWeight: "700",
+    minHeight: 44,
+    justifyContent: "center",
   },
 });
 

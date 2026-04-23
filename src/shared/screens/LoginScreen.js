@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -10,21 +9,48 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS } from "../theme/theme";
+import { theme } from "../theme/theme";
+import StyledText from "../components/StyledText";
 import RoleSelector from "../components/RoleSelector";
+import CustomInput from "../components/CustomInput";
+import ErrorBanner from "../components/ErrorBanner";
 import { useAuth } from "../context/AuthContext";
 import { BottomNextBar } from "../components/ScreenActions";
 
 const LoginScreen = ({ navigation }) => {
-  const [role, setRole] = useState("Farmer");
-  const { login } = useAuth();
+  const [role, setRole] = useState("seller");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login, user } = useAuth();
 
-  const handleLogin = () => {
-    login(role);
-    if (role === "Farmer") {
-      navigation.reset({ index: 0, routes: [{ name: "SellerDashboard" }] });
-    } else {
-      navigation.reset({ index: 0, routes: [{ name: "BuyerDashboard" }] });
+  useEffect(() => {
+    if (user?.role) {
+      if (user.role === "seller" || user.role === "customer") {
+        navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+      }
+      setRole(user.role);
+    }
+  }, [user?.role]);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setErrorMessage("Please enter both email and password.");
+      return;
+    }
+    setErrorMessage("");
+    setLoading(true);
+    try {
+      const profile = await login(email, password, role);
+      if (profile?.role === "seller" || profile?.role === "customer") {
+        navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+      }
+    } catch (error) {
+      setErrorMessage(error.message || "Failed to sign in. Please check your credentials.");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,37 +67,75 @@ const LoginScreen = ({ navigation }) => {
           {/* Branding */}
           <View style={styles.header}>
             <View style={styles.brandCircle}>
-              <Feather name="globe" size={36} color={COLORS.white} />
+              <Feather name="globe" size={32} color={theme.COLORS.white} />
             </View>
-            <Text allowFontScaling={true} style={styles.title}>BharatMandi</Text>
-            <Text allowFontScaling={true} style={styles.subtitle}>Empowering India's Agriculture</Text>
+            <StyledText variant="display" color={theme.COLORS.primary} bold style={{ textAlign: "center" }}>
+              BharatMandi
+            </StyledText>
+            <StyledText variant="bodySecondary" color={theme.COLORS.textSecondary} style={{ marginTop: 4 }}>
+              Empowering India's Agriculture
+            </StyledText>
           </View>
 
           {/* Login card */}
-          <View style={[styles.card, SHADOWS.strong]}>
-            <Text allowFontScaling={true} style={styles.cardTitle}>Get Started</Text>
-            <Text allowFontScaling={true} style={styles.instruction}>
-              Choose your role to continue
-            </Text>
+          <View style={[styles.card, theme.SHADOWS.strong]}>
+            <StyledText variant="screenTitle" bold style={{ textAlign: "center", marginBottom: 4 }}>
+              Get Started
+            </StyledText>
+            <StyledText variant="bodySecondary" color={theme.COLORS.textSecondary} style={{ textAlign: "center", marginBottom: 24 }}>
+              Choose your role and sign in
+            </StyledText>
 
-            <RoleSelector selectedRole={role} onRoleChange={setRole} />
+            <ErrorBanner message={errorMessage} />
+
+            <RoleSelector
+              selectedRole={user?.role || role}
+              onRoleChange={setRole}
+              disabled={!!user?.role}
+            />
+            {!!user?.role && (
+              <StyledText variant="caption" color={theme.COLORS.textSecondary} style={{ textAlign: "center", marginBottom: 12 }}>
+                Account role locked to {user.role}
+              </StyledText>
+            )}
+
+            <CustomInput 
+              label="Email" 
+              placeholder="your@email.com" 
+              keyboardType="email-address" 
+              value={email}
+              onChangeText={setEmail}
+              accessibilityHint="Enter your email"
+            />
+            <CustomInput 
+              label="Password" 
+              placeholder="........" 
+              secureTextEntry 
+              value={password}
+              onChangeText={setPassword}
+              accessibilityHint="Enter your password"
+            />
 
             <View style={styles.footer}>
-              <Text allowFontScaling={true} style={styles.footerText}>New here? </Text>
+              <StyledText variant="bodySecondary" color={theme.COLORS.textSecondary}>New here? </StyledText>
               <TouchableOpacity
                 onPress={() => navigation.navigate("Register")}
                 accessibilityRole="button"
                 accessibilityLabel="Create account"
                 accessibilityHint="Open registration screen"
+                style={{ padding: 4 }}
               >
-                <Text allowFontScaling={true} style={styles.link}>Create Account</Text>
+                <StyledText variant="bodySecondary" bold color={theme.COLORS.primary}>Create Account</StyledText>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
         <BottomNextBar
-          label="Next: Open Dashboard"
+          label={loading ? "Signing In..." : "Sign In"}
           onPress={handleLogin}
+          disabled={loading}
+          loading={loading}
+          icon="log-in"
           accessibilityHint="Signs you in and opens your dashboard"
         />
       </KeyboardAvoidingView>
@@ -82,7 +146,7 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.COLORS.background,
   },
   flex: {
     flex: 1,
@@ -90,68 +154,35 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    padding: SPACING.lg,
+    padding: theme.SPACING.lg,
   },
   header: {
     alignItems: "center",
-    marginBottom: SPACING.xl,
+    marginBottom: theme.SPACING.xl,
   },
   brandCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: COLORS.primary,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: SPACING.md,
-    ...SHADOWS.strong,
-  },
-  title: {
-    fontSize: FONT_SIZES.hero,
-    fontWeight: FONT_WEIGHTS.heavy,
-    color: COLORS.primary,
-    textAlign: "center",
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-    fontWeight: FONT_WEIGHTS.medium,
+    marginBottom: 16,
+    ...theme.SHADOWS.strong,
   },
   card: {
-    backgroundColor: COLORS.white,
-    padding: SPACING.xl,
-    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: theme.COLORS.white,
+    padding: 24,
+    borderRadius: theme.BORDER_RADIUS.xl,
     width: "100%",
-  },
-  cardTitle: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.textPrimary,
-    textAlign: "center",
-  },
-  instruction: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-    textAlign: "center",
-    marginTop: SPACING.xs,
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: SPACING.lg,
-  },
-  footerText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZES.sm,
-  },
-  link: {
-    color: COLORS.primary,
-    fontWeight: FONT_WEIGHTS.bold,
-    fontSize: FONT_SIZES.sm,
+    alignItems: "center",
+    marginTop: 24,
+    minHeight: 44, // Touch target
   },
 });
 
 export default LoginScreen;
-

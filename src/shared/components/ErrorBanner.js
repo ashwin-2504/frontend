@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { BORDER_RADIUS, COLORS, FONT_WEIGHTS, SPACING } from "../theme/theme";
+import { theme } from "../theme/theme";
+import StyledText from "./StyledText";
 import { getLiveRegion } from "../utils/accessibility";
 
 const ErrorBanner = ({ message }) => {
@@ -17,10 +18,10 @@ const ErrorBanner = ({ message }) => {
       accessibilityRole="alert"
       accessibilityLabel={message}
     >
-      <Feather name="alert-triangle" size={20} color={COLORS.error} />
-      <Text allowFontScaling={true} style={styles.text}>
+      <Feather name="alert-triangle" size={20} color={theme.COLORS.error} />
+      <StyledText allowFontScaling={true} style={styles.text} color="#7A1E1E" semiBold>
         {message}
-      </Text>
+      </StyledText>
     </View>
   );
 };
@@ -30,17 +31,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: COLORS.error,
+    borderColor: theme.COLORS.error,
     backgroundColor: "#FDECEA",
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
+    borderRadius: theme.BORDER_RADIUS.md,
+    padding: theme.SPACING.md,
+    gap: theme.SPACING.sm,
+    marginBottom: theme.SPACING.md,
   },
   text: {
     flex: 1,
-    color: "#7A1E1E",
-    fontWeight: FONT_WEIGHTS.semibold,
   },
 });
 

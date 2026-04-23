@@ -1,14 +1,16 @@
 import React, { useState } from "react";
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { StyleSheet, View, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, STATUS_COLORS, FONT_SIZES, FONT_WEIGHTS } from "../../shared/theme/theme";
+import { theme } from "../../shared/theme/theme";
+import StyledText from "../../shared/components/StyledText";
 import apiService from "../../shared/services/apiService";
 import { TopBar } from "../../shared/components/ScreenActions";
 import ErrorBanner from "../../shared/components/ErrorBanner";
 import { announceMessage } from "../../shared/utils/accessibility";
+import { formatDate } from '../../shared/utils/formatters';
 
-const STATUS_CHOICES = ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"];
+const STATUS_CHOICES = ["PENDING", "PLACED", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
 
 const SellerOrderDetailScreen = ({ route, navigation }) => {
   const { order: initialOrder } = route.params;
@@ -29,7 +31,7 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
           onPress: async () => {
             try {
               setLoading(true);
-              const updatedOrder = await apiService.updateOrderStatus(order.id, newStatus);
+              const updatedOrder = await apiService.updateOrderStatus(order.orderId, newStatus);
               setOrder({ ...order, status: updatedOrder.status || newStatus });
               setErrorMessage("");
               announceMessage(`Order status changed to ${newStatus}`);
@@ -50,13 +52,13 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
   };
 
   const getStatusColor = (status) => {
-    const sc = STATUS_COLORS[status];
-    return sc ? sc.text : COLORS.textSecondary;
+    const sc = theme.STATUS_COLORS[status];
+    return sc ? sc.text : theme.COLORS.textSecondary;
   };
 
   const getStatusBg = (status) => {
-    const sc = STATUS_COLORS[status];
-    return sc ? sc.bg : COLORS.background;
+    const sc = theme.STATUS_COLORS[status];
+    return sc ? sc.bg : theme.COLORS.background;
   };
 
   return (
@@ -67,27 +69,29 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
         <ErrorBanner message={errorMessage} />
         <View style={styles.card}>
           <View style={styles.orderHeader}>
-            <Text allowFontScaling={true} style={styles.orderId}>Order #{order.id.substring(0, 8)}</Text>
+            <StyledText variant="bodyPrimary" bold>Order #{order.orderId?.substring(0, 8)}</StyledText>
             <View style={[styles.statusBadge, { backgroundColor: getStatusBg(order.status) }]}>
-              <Text allowFontScaling={true} style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
+              <StyledText variant="caption" bold style={{ color: getStatusColor(order.status) }}>{order.status}</StyledText>
             </View>
           </View>
           
           <View style={styles.detailRow}>
-            <Feather name="calendar" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.detailText}>{new Date(order.created_at).toLocaleDateString()}</Text>
+            <Feather name="calendar" size={16} color={theme.COLORS.textSecondary} />
+            <StyledText variant="bodySecondary" style={{ marginLeft: 8 }}>
+              {formatDate(order.createdAt)}
+            </StyledText>
           </View>
           <View style={styles.detailRow}>
-            <Feather name="user" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.detailText}>{order.customer_name || "Unknown Customer"}</Text>
+            <Feather name="user" size={16} color={theme.COLORS.textSecondary} />
+            <StyledText variant="bodySecondary" style={{ marginLeft: 8 }}>{order.buyerName || "Unknown Customer"}</StyledText>
           </View>
           <View style={styles.detailRow}>
-            <Feather name="dollar-sign" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.detailTextBold}>₹{order.total_amount}</Text>
+            <Feather name="dollar-sign" size={16} color={theme.COLORS.textSecondary} />
+            <StyledText variant="bodyPrimary" bold style={{ marginLeft: 8 }}>₹{order.sellerTotal}</StyledText>
           </View>
         </View>
 
-        <Text allowFontScaling={true} style={styles.sectionTitle}>Update Status</Text>
+        <StyledText variant="sectionHeader" bold style={{ marginBottom: theme.SPACING.md }}>Update Status</StyledText>
         <View style={styles.statusActions}>
           {STATUS_CHOICES.map((status) => (
             <TouchableOpacity 
@@ -106,23 +110,31 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
               {loading && order.status !== status ? (
                 <View style={styles.loadingPlaceholder} />
               ) : (
-                <Text style={[
-                  styles.statusButtonText, 
-                  order.status === status && { color: COLORS.white },
-                  order.status !== status && { color: getStatusColor(status) }
-                ]}>
+                <StyledText 
+                  variant="button" 
+                  small
+                  color={order.status === status ? theme.COLORS.white : getStatusColor(status)}
+                >
                   {status}
-                </Text>
+                </StyledText>
               )}
             </TouchableOpacity>
           ))}
         </View>
-        {loading && <ActivityIndicator style={{ marginTop: SPACING.md }} color={COLORS.primary} />}
+        {loading && <ActivityIndicator style={{ marginTop: theme.SPACING.md }} color={theme.COLORS.primary} />}
 
         <View style={styles.itemsSection}>
-           <Text allowFontScaling={true} style={styles.sectionTitle}>Order Information</Text>
+           <StyledText variant="sectionHeader" bold style={{ marginBottom: theme.SPACING.md }}>Order Items</StyledText>
            <View style={styles.card}>
-             <Text allowFontScaling={true} style={styles.infoText}>Further items and delivery details could be displayed here depending on backend schema expansions.</Text>
+             {order.items && order.items.map((item, index) => (
+                <View key={item.productId || index} style={[styles.itemRow, index < order.items.length - 1 && styles.itemBorder]}>
+                  <View style={{ flex: 1 }}>
+                    <StyledText variant="bodyPrimary" bold>{item.productSnapshot?.name || "Product"}</StyledText>
+                    <StyledText variant="caption" color={theme.COLORS.textSecondary}>Qty: {item.qty} × ₹{item.priceAtPurchase}</StyledText>
+                  </View>
+                  <StyledText variant="bodyPrimary" bold>₹{item.qty * item.priceAtPurchase}</StyledText>
+                </View>
+             ))}
            </View>
         </View>
 
@@ -132,57 +144,45 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
-    backgroundColor: COLORS.white, ...SHADOWS.light, zIndex: 10
-  },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: COLORS.textPrimary },
-  backButton: { padding: SPACING.xs },
-  scrollContent: { padding: SPACING.lg },
+  container: { flex: 1, backgroundColor: theme.COLORS.background },
+  scrollContent: { padding: theme.SPACING.lg },
   card: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    ...SHADOWS.medium,
-    marginBottom: SPACING.lg,
+    backgroundColor: theme.COLORS.white,
+    borderRadius: theme.BORDER_RADIUS.lg,
+    padding: theme.SPACING.lg,
+    ...theme.SHADOWS.medium,
+    marginBottom: theme.SPACING.lg,
   },
   orderHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: SPACING.md,
+    marginBottom: theme.SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingBottom: SPACING.md,
+    borderBottomColor: theme.COLORS.border,
+    paddingBottom: theme.SPACING.md,
   },
-  orderId: { fontSize: 16, fontWeight: "700", color: COLORS.textPrimary },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  statusText: { fontSize: 12, fontWeight: "700" },
-  detailRow: { flexDirection: "row", alignItems: "center", marginBottom: SPACING.sm },
-  detailText: { fontSize: 14, color: COLORS.textSecondary, marginLeft: 8 },
-  detailTextBold: { fontSize: 16, fontWeight: "700", color: COLORS.textPrimary, marginLeft: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: COLORS.textPrimary, marginVertical: SPACING.md },
+  detailRow: { flexDirection: "row", alignItems: "center", marginBottom: theme.SPACING.sm },
   statusActions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   statusButton: {
     width: "48%",
-    paddingVertical: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: theme.SPACING.md,
+    borderRadius: theme.BORDER_RADIUS.md,
     borderWidth: 1.5,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: SPACING.md,
-    backgroundColor: COLORS.white,
+    marginBottom: theme.SPACING.md,
+    backgroundColor: theme.COLORS.white,
   },
   statusButtonActive: {
-    backgroundColor: COLORS.textPrimary,
-    borderColor: COLORS.textPrimary,
+    backgroundColor: theme.COLORS.textPrimary,
+    borderColor: theme.COLORS.textPrimary,
   },
-  statusButtonText: { fontSize: 14, fontWeight: "700" },
   loadingPlaceholder: { height: 16 },
-  itemsSection: { marginTop: SPACING.md },
-  infoText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
+  itemsSection: { marginTop: theme.SPACING.md },
+  itemRow: { flexDirection: "row", paddingVertical: 12, alignItems: "center" },
+  itemBorder: { borderBottomWidth: 1, borderBottomColor: theme.COLORS.border },
 });
 
 export default SellerOrderDetailScreen;

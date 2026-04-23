@@ -1,17 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, STATUS_COLORS, FONT_SIZES, FONT_WEIGHTS } from '../../shared/theme/theme';
+import { theme } from '../../shared/theme/theme';
+import StyledText from '../../shared/components/StyledText';
+import { formatDate, formatCurrency } from '../../shared/utils/formatters';
+
+
 
 const OrderItem = ({ order, onPress }) => {
   const getStatusColor = (status) => {
-    const sc = STATUS_COLORS[status];
-    return sc ? sc.text : COLORS.textSecondary;
+    const sc = theme.STATUS_COLORS[status];
+    return sc ? sc.text : theme.COLORS.textSecondary;
   };
 
   const getStatusBg = (status) => {
-    const sc = STATUS_COLORS[status];
-    return sc ? sc.bg : COLORS.background;
+    const sc = theme.STATUS_COLORS[status];
+    return sc ? sc.bg : theme.COLORS.background;
   };
 
   return (
@@ -19,105 +23,101 @@ const OrderItem = ({ order, onPress }) => {
       style={styles.container}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Order ${order.id.substring(0, 8)}, status ${order.status}, amount rupees ${order.total_amount}`}
+      accessibilityLabel={`Order ${order.orderId?.substring(0, 8)}, status ${order.status}, amount rupees ${order.totalAmount || order.sellerTotal}`}
       accessibilityHint="Opens detailed order status"
     >
       <View style={styles.header}>
         <View style={styles.idContainer}>
-          <Feather name="hash" size={14} color={COLORS.textSecondary} />
-          <Text allowFontScaling={true} style={styles.orderId}>{order.id.substring(0, 8)}...</Text>
+          <Feather name="hash" size={14} color={theme.COLORS.textSecondary} />
+          <StyledText variant="caption" color={theme.COLORS.textSecondary} style={styles.orderId}>
+            {order.orderId?.substring(0, 8)}
+          </StyledText>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusBg(order.status) }]}>
-          <Text allowFontScaling={true} style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
+          <StyledText 
+            variant="caption" 
+            bold 
+            color={getStatusColor(order.status)} 
+          >
+            {order.status}
+          </StyledText>
         </View>
       </View>
       
       <View style={styles.content}>
-        <Text allowFontScaling={true} style={styles.customerName}>{order.customer_name}</Text>
-        <Text allowFontScaling={true} style={styles.orderDate}>{new Date(order.created_at).toLocaleDateString()}</Text>
-      </View>
+        <StyledText variant="bodyPrimary" bold>{order.buyerName || 'My Order'}</StyledText>
+        <StyledText variant="caption" color={theme.COLORS.textSecondary} style={{ marginTop: 2 }}>
+          {formatDate(order.createdAt)}
+        </StyledText>
 
+      </View>
+ 
       <View style={styles.footer}>
-        <Text allowFontScaling={true} style={styles.amount}>₹{order.total_amount}</Text>
+        <View style={{ flex: 1 }}>
+          <StyledText variant="bodySecondary" bold color={theme.COLORS.textPrimary}>
+            {order.items && order.items.length > 0 
+              ? `${order.items.slice(0, 2).map(i => i.name).join(', ')}${order.items.length > 2 ? ` +${order.items.length - 2} more` : ''}`
+              : 'Order Details'}
+          </StyledText>
+          <StyledText variant="sectionHeader" bold color={theme.COLORS.primary} style={{ marginTop: 4 }}>
+            {formatCurrency(order.totalAmount || order.sellerTotal)}
+          </StyledText>
+        </View>
         <View style={styles.itemsCount}>
-          <Feather name="package" size={12} color={COLORS.textSecondary} />
-          <Text allowFontScaling={true} style={styles.countText}>{order.items?.length || 0} items</Text>
+          <Feather name="package" size={14} color={theme.COLORS.textSecondary} />
+          <StyledText variant="caption" color={theme.COLORS.textSecondary} style={{ marginLeft: 4 }}>
+            {order.itemCount || order.items?.length || 0} items
+          </StyledText>
         </View>
       </View>
+
     </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.white,
-    padding: SPACING.md,
+    backgroundColor: theme.COLORS.white,
+    padding: theme.SPACING.md,
     minHeight: 72,
-    borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.light,
+    borderRadius: theme.BORDER_RADIUS.lg,
+    marginBottom: theme.SPACING.md,
+    ...theme.SHADOWS.light,
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
+    borderColor: theme.COLORS.primaryLight,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: theme.SPACING.sm,
   },
   idContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   orderId: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
     marginLeft: 4,
-    fontFamily: 'monospace',
   },
   statusBadge: {
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '700',
+    borderRadius: theme.BORDER_RADIUS.sm,
   },
   content: {
-    marginBottom: SPACING.md,
-  },
-  customerName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  orderDate: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginTop: 2,
+    marginBottom: 12,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: SPACING.sm,
-  },
-  amount: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
+    borderTopColor: theme.COLORS.border,
+    paddingTop: 10,
   },
   itemsCount: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  countText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginLeft: 4,
   },
 });
 
