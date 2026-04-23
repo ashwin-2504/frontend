@@ -11,24 +11,23 @@ import { useAuth } from "../../shared/context/AuthContext";
 import { TopBar } from "../../shared/components/ScreenActions";
 import ErrorBanner from "../../shared/components/ErrorBanner";
 import { announceMessage } from "../../shared/utils/accessibility";
+import { isCustomerAccessForbiddenError, isSellerRole } from "../../shared/utils/roleUtils";
 
 const SellerOrdersScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [accessBlocked, setAccessBlocked] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (user?.id) {
-        fetchOrders();
-      }
-    }, [user?.id])
-  );
+  const fetchOrders = useCallback(async () => {
+    if (accessBlocked) {
+      return;
+    }
 
-  const fetchOrders = async () => {
-    if (!user?.id || user?.role !== "seller") {
-      const message = "Please sign in as a farmer to view seller orders.";
+    if (!user?.id || !isSellerRole(user?.role)) {
+      const message = "Seller access is unavailable for this account.";
+      setAccessBlocked(true);
       setErrorMessage(message);
       announceMessage(message);
       return;
@@ -40,16 +39,31 @@ const SellerOrdersScreen = ({ navigation }) => {
       const data = await apiService.getSellerOrders(sellerId);
       setOrders(data);
       setErrorMessage("");
-    } catch (error) {
-      console.error("Failed to fetch seller orders:", error);
-      const message = (error?.message || "Could not load orders. Please try again.")
+    } catch (_error) {
+      console.error("Failed to fetch seller orders:", _error);
+      if (isCustomerAccessForbiddenError(_error)) {
+        const message = "This account is a customer account. Seller orders are unavailable.";
+        setAccessBlocked(true);
+        setErrorMessage(message);
+        announceMessage(message);
+        return;
+      }
+      const message = (_error?.message || "Could not load orders. Please try again.")
         .replace(/^\[[^\]]+\]\s*/, "");
       setErrorMessage(message);
       announceMessage("Could not load orders. Use retry to try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessBlocked, user?.id, user?.role]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id && !accessBlocked) {
+        fetchOrders();
+      }
+    }, [accessBlocked, fetchOrders, user?.id])
+  );
 
   const renderContent = () => {
     if (loading) {
@@ -83,7 +97,7 @@ const SellerOrdersScreen = ({ navigation }) => {
       return (
         <View style={styles.centerContainer}>
           <Feather name="shopping-bag" size={48} color={theme.COLORS.border} />
-          <StyledText variant="bodyPrimary" center style={{ marginTop: theme.SPACING.md }}>You don't have any orders yet.</StyledText>
+          <StyledText variant="bodyPrimary" center style={{ marginTop: theme.SPACING.md }}>You don&apos;t have any orders yet.</StyledText>
         </View>
       );
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { StyleSheet, View, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -21,35 +21,7 @@ const MarketplaceScreen = ({ navigation }) => {
   const { user, updateUserLocation } = useAuth();
   const [locationLoading, setLocationLoading] = useState(false);
 
-  useEffect(() => {
-    initMarketplace();
-  }, []);
-
-  const initMarketplace = async () => {
-    let locationData = null;
-    setLocationLoading(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === "granted") {
-        const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-        });
-        locationData = {
-          lat: location.coords.latitude,
-          lng: location.coords.longitude,
-        };
-        // Sync with global context
-        await updateUserLocation(locationData);
-      }
-    } catch (error) {
-      console.warn("Location permission or fetch failed:", error);
-    } finally {
-      setLocationLoading(false);
-      fetchAllProducts(locationData || user?.lastKnownLocation);
-    }
-  };
-
-  const fetchAllProducts = async (location = user?.lastKnownLocation) => {
+  const fetchAllProducts = useCallback(async (location = user?.lastKnownLocation) => {
     setLoading(true);
     try {
       // Use getProductFeed (distance sorted) if location exists, else regular feed
@@ -60,15 +32,43 @@ const MarketplaceScreen = ({ navigation }) => {
       });
       setProducts(data);
       setErrorMessage("");
-    } catch (error) {
-      console.error("Failed to fetch products:", error);
+    } catch (_error) {
+      console.error("Failed to fetch products:", _error);
       const message = "Could not load products. Please try again.";
       setErrorMessage(message);
       announceMessage(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.lastKnownLocation, user?.pincode]);
+
+  const initMarketplace = useCallback(async () => {
+    let locationData = null;
+    setLocationLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        locationData = {
+          lat: location.coords.latitude,
+          lng: location.coords.longitude,
+        };
+        // Sync with global context
+        await updateUserLocation(locationData);
+      }
+    } catch (_error) {
+      console.warn("Location permission or fetch failed:", _error);
+    } finally {
+      setLocationLoading(false);
+      fetchAllProducts(locationData || user?.lastKnownLocation);
+    }
+  }, [fetchAllProducts, updateUserLocation, user?.lastKnownLocation]);
+
+  useEffect(() => {
+    initMarketplace();
+  }, [initMarketplace]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -80,8 +80,8 @@ const MarketplaceScreen = ({ navigation }) => {
       const data = await apiService.searchProducts(searchQuery, user?.lastKnownLocation || { pincode: user?.pincode });
       setProducts(data);
       setErrorMessage("");
-    } catch (error) {
-      console.error("Search failed:", error);
+    } catch (_error) {
+      console.error("Search failed:", _error);
       const message = "Search failed. Check your network and try again.";
       setErrorMessage(message);
       announceMessage(message);

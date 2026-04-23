@@ -5,13 +5,9 @@
 
 import { auth } from "../../../FirebaseConfig";
 
-const RAW_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-
-const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/$/, "") : "";
-
-if (!BASE_URL) {
-  console.warn("Warning: EXPO_PUBLIC_API_URL is not defined in .env");
-}
+const DEFAULT_BASE_URL = "https://backend-one-eta-35.vercel.app";
+const RAW_BASE_URL = process.env.EXPO_PUBLIC_API_URL?.trim();
+const BASE_URL = (RAW_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
 
 // Circuit Breaker State to prevent error spam
 const CIRCUIT_BREAKER_COOLDOWN = 5000; // 5 seconds
@@ -35,14 +31,14 @@ const resetConnectionState = () => {
 
 const getNetworkHint = () => {
   if (!RAW_BASE_URL) {
-    return "Set EXPO_PUBLIC_API_URL to your computer's LAN IP, like http://192.168.0.101:3000.";
+    return `EXPO_PUBLIC_API_URL was not set, so the app is using the hosted backend at ${BASE_URL}. Set USE_LOCAL_API=true before running npm run update-ip if you want a LAN backend.`;
   }
 
   if (/^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?/i.test(RAW_BASE_URL)) {
-    return "Real phone cannot use localhost. Use your computer's LAN IP, like http://192.168.0.101:3000.";
+    return "Real phone cannot use localhost. Use your computer's LAN IP, or switch back to the hosted Vercel backend.";
   }
 
-  return `Check that the phone and computer are on the same Wi-Fi and that the backend is reachable at ${BASE_URL}.`;
+  return `Check that the backend is reachable at ${BASE_URL}.`;
 };
 
 const normalizeNetworkError = (context, error) => {
@@ -52,7 +48,7 @@ const normalizeNetworkError = (context, error) => {
   }
 
   let normalized;
-  if (error.name === "AbortError" || message.includes("aborted") || message.includes("timeout")) {
+  if (error?.name === "AbortError" || message.includes("aborted") || message.includes("timeout")) {
     normalized = new Error(`[${context}] Connection timed out. Check if the server is running at ${BASE_URL}.`);
     recordConnectionFailure(normalized);
   } else if (message.includes("Network request failed") || message.includes("TypeError")) {
@@ -68,12 +64,18 @@ const normalizeNetworkError = (context, error) => {
 const normalizeAuthError = (context, error) => {
   const message = error?.message || String(error);
   if (message.includes("No signed-in user")) {
-    return new Error(`[${context}] Sign in again before continuing.`);
+    const normalized = new Error(`[${context}] Sign in again before continuing.`);
+    normalized.code = "auth/no-current-user";
+    return normalized;
   }
   if (message.includes("Unauthorized")) {
-    return new Error(`[${context}] Session expired. Sign in again.`);
+    const normalized = new Error(`[${context}] Session expired. Sign in again.`);
+    normalized.code = "auth/session-expired";
+    return normalized;
   }
-  return error instanceof Error ? error : new Error(message);
+  const normalized = error instanceof Error ? error : new Error(message);
+  normalized.code = normalized.code || "auth/session-expired";
+  return normalized;
 };
 
 const getIdToken = async () => {
@@ -101,24 +103,26 @@ const withAuthHeaders = async (context, headers = {}) => {
  * or when the JSON body contains `{ success: false }`.
  */
 async function _handleResponse(response, context) {
-  let data;
-  try {
-    data = await response.json();
-  } catch {
-    // Body wasn't JSON — still treat as an error if status is bad
-    if (!response.ok) {
-      throw new Error(
-        `[${context}] Server returned ${response.status} ${response.statusText}`
-      );
+  const text = await response.text();
+  let data = {};
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
     }
-    return {};
   }
 
   if (!response.ok) {
     const serverMsg =
-      data?.message || data?.error || JSON.stringify(data);
+      data?.message || data?.error || data?.raw || `${response.status} ${response.statusText}`;
     const details = data?.details ? `\nDetails: ${JSON.stringify(data.details)}` : "";
     throw new Error(`[${context}] ${response.status}: ${serverMsg}${details}`);
+  }
+
+  if (!text) {
+    return {};
   }
 
   if (data.success === false) {
@@ -185,11 +189,6 @@ const apiService = {
    * This is best-effort and should not block local auth state.
    */
   async syncUserProfile(idToken, profileData) {
-    if (!BASE_URL) {
-      console.warn("Skipping profile sync because EXPO_PUBLIC_API_URL is not defined.");
-      return null;
-    }
-
     try {
       const response = await fetchWithTimeout(`${BASE_URL}/api/auth/profile`, {
         method: "POST",

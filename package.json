@@ -9,6 +9,8 @@
     "android": "npm run start:lan",
     "ios": "npm run start:lan",
     "update-ip": "node scripts/update-env-ip.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "web": "expo start --web",
     "build:android": "eas build -p android --profile production",
     "update:production": "eas update --branch production"
@@ -41,6 +43,8 @@
     "@types/react": "~19.1.10",
     "concurrently": "^9.2.1",
     "localtunnel": "^2.0.2",
+    "eslint": "^9.39.1",
+    "eslint-config-expo": "^55.0.0",
     "typescript": "~5.9.2"
   }
 }

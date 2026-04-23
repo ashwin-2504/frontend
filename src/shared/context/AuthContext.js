@@ -11,6 +11,7 @@ import { auth, db } from '../../../FirebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import apiService from '../services/apiService';
 import { hasMovedSignificantly } from '../utils/geoUtils';
+import { normalizeRole } from '../utils/roleUtils';
 
 const AuthContext = createContext();
 const AUTH_PROFILE_KEY_PREFIX = '@bharatmandi_auth_profile:';
@@ -102,7 +103,9 @@ export const AuthProvider = ({ children }) => {
             id: firebaseUser.uid,
             email: firebaseUser.email || '',
             name: firestoreData?.name || firebaseUser.displayName || cachedProfile?.name || 'Unknown',
-            role: idTokenResult?.claims?.role || firestoreData?.role || cachedProfile?.role || 'customer',
+            role: normalizeRole(
+              idTokenResult?.claims?.role || firestoreData?.role || cachedProfile?.role
+            ) || 'customer',
             phone: firestoreData?.phone || cachedProfile?.phone || '',
             address: firestoreData?.address || cachedProfile?.address || '',
             addressLine: firestoreData?.addressLine || cachedProfile?.addressLine || '',
@@ -166,16 +169,19 @@ export const AuthProvider = ({ children }) => {
         readCachedProfile(firebaseUser.uid),
       ]);
 
-      const resolvedRole =
+      const firestoreData = await fetchFreshProfile(firebaseUser.uid);
+      const inferredRole = normalizeRole(
         tokenResult?.claims?.role ||
-        cachedProfile?.role ||
-        roleHint ||
-        'customer';
+        firestoreData?.role ||
+        cachedProfile?.role
+      );
+      const resolvedRole = inferredRole || 'customer';
+      const requestedRole = normalizeRole(roleHint);
 
       if (
-        roleHint &&
-        (tokenResult?.claims?.role || cachedProfile?.role) &&
-        resolvedRole !== roleHint
+        requestedRole &&
+        inferredRole &&
+        resolvedRole !== requestedRole
       ) {
         await firebaseSignOut(auth).catch(() => null);
         pendingProfileRef.current = null;
@@ -184,13 +190,12 @@ export const AuthProvider = ({ children }) => {
 
       // Rely on onAuthStateChanged to handle profile merge, or manually trigger it here if needed
       // For immediate response, we fetch once more or wait for hydration
-      const firestoreData = await fetchFreshProfile(firebaseUser.uid);
-      
+
       const profile = {
         id: firebaseUser.uid,
         email: firebaseUser.email || email,
         name: firestoreData?.name || firebaseUser.displayName || cachedProfile?.name || 'Unknown',
-        role: firestoreData?.role || (tokenResult?.claims?.role) || roleHint || 'customer',
+        role: inferredRole || 'customer',
         phone: firestoreData?.phone || cachedProfile?.phone || '',
         address: firestoreData?.address || cachedProfile?.address || '',
         addressLine: firestoreData?.addressLine || cachedProfile?.addressLine || '',
@@ -214,6 +219,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, role, name, phone, addressData) => {
     const { address, addressLine, city, pincode } = addressData || {};
+    const normalizedRole = normalizeRole(role) || 'customer';
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
@@ -221,7 +227,7 @@ export const AuthProvider = ({ children }) => {
       pendingProfileRef.current = {
         uid: firebaseUser.uid,
         name,
-        role,
+        role: normalizedRole,
         email,
         phone,
         address,
@@ -235,7 +241,7 @@ export const AuthProvider = ({ children }) => {
       const profile = {
         id: firebaseUser.uid,
         name,
-        role,
+        role: normalizedRole,
         email: firebaseUser.email || email,
         phone,
         address,
@@ -252,15 +258,15 @@ export const AuthProvider = ({ children }) => {
       const idToken = await firebaseUser.getIdToken(true);
       await apiService.syncUserProfile(idToken, {
         name,
-        role,
+        role: normalizedRole,
         phone,
         address,
         addressLine,
         city,
         pincode,
         email: firebaseUser.email || email,
-        farmName: role === 'seller' ? `${name}'s Farm` : '',
-        deliveryCharge: role === 'seller' ? 30 : 0
+        farmName: normalizedRole === 'seller' ? `${name}'s Farm` : '',
+        deliveryCharge: normalizedRole === 'seller' ? 30 : 0
       });
       await firebaseUser.getIdToken(true);
     } catch (error) {

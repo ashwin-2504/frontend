@@ -11,24 +11,23 @@ import { useAuth } from "../../shared/context/AuthContext";
 import { TopBar } from "../../shared/components/ScreenActions";
 import ErrorBanner from "../../shared/components/ErrorBanner";
 import { announceMessage } from "../../shared/utils/accessibility";
+import { isCustomerAccessForbiddenError, isSellerRole } from "../../shared/utils/roleUtils";
 
 const SellerProductsScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [accessBlocked, setAccessBlocked] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (user?.id) {
-        fetchProducts();
-      }
-    }, [user?.id])
-  );
+  const fetchProducts = useCallback(async () => {
+    if (accessBlocked) {
+      return;
+    }
 
-  const fetchProducts = async () => {
-    if (!user?.id || user?.role !== "seller") {
-      const message = "Please sign in as a farmer to view seller products.";
+    if (!user?.id || !isSellerRole(user?.role)) {
+      const message = "Seller access is unavailable for this account.";
+      setAccessBlocked(true);
       setErrorMessage(message);
       announceMessage(message);
       return;
@@ -40,16 +39,31 @@ const SellerProductsScreen = ({ navigation }) => {
       const data = await apiService.getSellerProducts(sellerId);
       setProducts(data);
       setErrorMessage("");
-    } catch (error) {
-      console.error("Failed to fetch seller products:", error);
-      const message = (error?.message || "Could not load products. Please retry.")
+    } catch (_error) {
+      console.error("Failed to fetch seller products:", _error);
+      if (isCustomerAccessForbiddenError(_error)) {
+        const message = "This account is a customer account. Seller products are unavailable.";
+        setAccessBlocked(true);
+        setErrorMessage(message);
+        announceMessage(message);
+        return;
+      }
+      const message = (_error?.message || "Could not load products. Please retry.")
         .replace(/^\[[^\]]+\]\s*/, "");
       setErrorMessage(message);
       announceMessage("Could not load products. Use retry to try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessBlocked, user?.id, user?.role]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id && !accessBlocked) {
+        fetchProducts();
+      }
+    }, [accessBlocked, fetchProducts, user?.id])
+  );
 
   const renderContent = () => {
     if (loading) {
@@ -83,7 +97,7 @@ const SellerProductsScreen = ({ navigation }) => {
       return (
         <View style={styles.centerContainer}>
           <Feather name="box" size={48} color={theme.COLORS.border} />
-          <StyledText variant="bodyPrimary" center style={{ marginTop: theme.SPACING.md, marginBottom: theme.SPACING.lg }}>You haven't added any products yet.</StyledText>
+          <StyledText variant="bodyPrimary" center style={{ marginTop: theme.SPACING.md, marginBottom: theme.SPACING.lg }}>You haven&apos;t added any products yet.</StyledText>
           <TouchableOpacity 
             style={styles.addButton}
             onPress={() => navigation.navigate("AddProduct")}

@@ -1,3 +1,5 @@
+import { ms } from '../utils/responsive';
+
 export const COLORS = {
   primary: "#1F6B4A",
   primaryLight: "#E5F3EC",
@@ -26,8 +28,6 @@ export const STATUS_COLORS = {
 
   CANCELLED: { bg: "#FFEBEE", text: "#C62828", icon: "x-circle" },
 };
-
-import { ms } from '../utils/responsive';
 
 export const FONT_SIZES = {
   caption: ms(14),

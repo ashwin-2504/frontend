@@ -100,7 +100,7 @@ const RegisterScreen = ({ navigation }) => {
               Create Account
             </StyledText>
             <StyledText variant="bodySecondary" color={theme.COLORS.textSecondary} style={{ textAlign: "center", marginBottom: 16 }}>
-              Join India's largest farming community
+              Join India&apos;s largest farming community
             </StyledText>
             <ErrorBanner message={errorMessage} />
 

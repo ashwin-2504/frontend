@@ -50,8 +50,8 @@ export const formatDate = (timestamp) => {
         month: 'numeric',
         year: 'numeric'
     });
-  } catch (error) {
-    console.error("formatDate error:", error);
+  } catch (_error) {
+    console.error("formatDate error:", _error);
     return "Recent";
   }
 };
@@ -77,7 +77,7 @@ export const formatFreshness = (harvestDate) => {
     if (diffDays <= 0) return "TODAY";
     if (diffDays === 1) return "1 DAY AGO";
     return `${diffDays}+ DAYS`;
-  } catch (error) {
+  } catch (_error) {
     return "TODAY";
   }
 };

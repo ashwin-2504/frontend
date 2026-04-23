@@ -9,17 +9,28 @@ import { TopBar } from "../../shared/components/ScreenActions";
 import ErrorBanner from "../../shared/components/ErrorBanner";
 import { announceMessage } from "../../shared/utils/accessibility";
 import { formatDate } from '../../shared/utils/formatters';
+import { isCustomerAccessForbiddenError, isSellerRole } from "../../shared/utils/roleUtils";
+import { useAuth } from "../../shared/context/AuthContext";
 
 const STATUS_CHOICES = ["PENDING", "PLACED", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
 
 const SellerOrderDetailScreen = ({ route, navigation }) => {
   const { order: initialOrder } = route.params;
+  const { user } = useAuth();
   const [order, setOrder] = useState(initialOrder);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleStatusUpdate = async (newStatus) => {
     if (newStatus === order.status) return;
+
+    if (!isSellerRole(user?.role)) {
+      const message = "Only a signed-in seller can update order status.";
+      setErrorMessage(message);
+      announceMessage(message);
+      Alert.alert("Access denied", message);
+      return;
+    }
 
     Alert.alert(
       "Update Order Status",
@@ -38,6 +49,13 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
               Alert.alert("Success", "Order status updated successfully!");
             } catch (error) {
               console.error("Failed to update status", error);
+              if (isCustomerAccessForbiddenError(error)) {
+                const message = "This account is a customer account. Seller order updates are unavailable.";
+                setErrorMessage(message);
+                announceMessage(message);
+                Alert.alert("Access denied", message);
+                return;
+              }
               const message = "Could not update order status. Please retry.";
               setErrorMessage(message);
               announceMessage(message);

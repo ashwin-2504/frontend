@@ -7,7 +7,6 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
-  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -44,8 +43,8 @@ const ProfileScreen = ({ navigation }) => {
       setLoading(true);
       const data = await apiService.getAddresses();
       setAddresses(data.data || []);
-    } catch (error) {
-      console.error("Failed to fetch addresses:", error);
+    } catch (_error) {
+      console.error("Failed to fetch addresses:", _error);
     } finally {
       setLoading(false);
     }
@@ -106,8 +105,8 @@ const ProfileScreen = ({ navigation }) => {
       setAddressForm({ label: "", fullAddress: "", city: "", state: "", pincode: "" });
       setEditingAddressId(null);
       await fetchAddresses();
-    } catch (error) {
-      Alert.alert("Error", error.message || `Failed to ${editingAddressId ? 'update' : 'add'} address`);
+    } catch (_error) {
+      Alert.alert("Error", _error.message || `Failed to ${editingAddressId ? 'update' : 'add'} address`);
     } finally {
       setLoading(false);
     }
@@ -127,8 +126,8 @@ const ProfileScreen = ({ navigation }) => {
               await updateUser(response.user);
             }
             await fetchAddresses();
-          } catch (error) {
-            Alert.alert("Error", error.message || "Failed to delete address");
+          } catch (_error) {
+            Alert.alert("Error", _error.message || "Failed to delete address");
           } finally {
             setLoading(false);
           }
@@ -145,8 +144,8 @@ const ProfileScreen = ({ navigation }) => {
         await updateUser(response.user);
       }
       await fetchAddresses();
-    } catch (error) {
-      Alert.alert("Error", error.message || "Failed to update default address");
+    } catch (_error) {
+      Alert.alert("Error", _error.message || "Failed to update default address");
     } finally {
       setLoading(false);
     }
@@ -166,7 +165,7 @@ const ProfileScreen = ({ navigation }) => {
               index: 0,
               routes: [{ name: "Login" }],
             });
-          } catch (error) {
+          } catch {
             Alert.alert("Error", "Failed to sign out. Please try again.");
           } finally {
             setLoading(false);

@@ -1,9 +1,12 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
+import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { isSellerRole } from '../utils/roleUtils';
 
 // Buyer Screens
 import BuyerDashboard from '../../buyer/screens/BuyerDashboard';
@@ -21,9 +24,10 @@ const Tab = createBottomTabNavigator();
 const MainTabNavigator = () => {
   const { user } = useAuth();
   const { cartCount } = useCart();
+  const insets = useSafeAreaInsets();
 
-  const role = user?.role?.toLowerCase();
-  const isSeller = role === 'seller' || role === 'farmer';
+  const isSeller = isSellerRole(user?.role);
+  const bottomInset = Math.max(insets.bottom, 8);
 
   return (
     <Tab.Navigator
@@ -36,11 +40,12 @@ const MainTabNavigator = () => {
           fontSize: 10,
         },
         tabBarStyle: {
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          paddingBottom: bottomInset,
+          paddingTop: 6,
+          height: 56 + bottomInset,
           backgroundColor: theme.COLORS.white,
           borderTopColor: theme.COLORS.border,
+          borderTopWidth: StyleSheet.hairlineWidth,
         },
         tabBarIcon: ({ color, size }) => {
           let iconName;

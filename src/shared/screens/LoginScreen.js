@@ -32,7 +32,7 @@ const LoginScreen = ({ navigation }) => {
       }
       setRole(user.role);
     }
-  }, [user?.role]);
+  }, [navigation, user?.role]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -72,8 +72,8 @@ const LoginScreen = ({ navigation }) => {
             <StyledText variant="display" color={theme.COLORS.primary} bold style={{ textAlign: "center" }}>
               BharatMandi
             </StyledText>
-            <StyledText variant="bodySecondary" color={theme.COLORS.textSecondary} style={{ marginTop: 4 }}>
-              Empowering India's Agriculture
+              <StyledText variant="bodySecondary" color={theme.COLORS.textSecondary} style={{ marginTop: 4 }}>
+              Empowering India&apos;s Agriculture
             </StyledText>
           </View>
 
@@ -125,7 +125,7 @@ const LoginScreen = ({ navigation }) => {
                 accessibilityHint="Open registration screen"
                 style={{ padding: 4 }}
               >
-                <StyledText variant="bodySecondary" bold color={theme.COLORS.primary}>Create Account</StyledText>
+              <StyledText variant="bodySecondary" bold color={theme.COLORS.primary}>Create Account</StyledText>
               </TouchableOpacity>
             </View>
           </View>

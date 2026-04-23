@@ -24,9 +24,10 @@ import { TopBar } from "../../shared/components/ScreenActions";
 import ErrorBanner from "../../shared/components/ErrorBanner";
 import EmptyState from "../../shared/components/EmptyState";
 import { announceMessage } from "../../shared/utils/accessibility";
+import { isCustomerAccessForbiddenError, isSellerRole } from "../../shared/utils/roleUtils";
 
 const SellerDashboard = ({ navigation }) => {
-  const { user, logout, confirmFarmLocation, updateUserLocation } = useAuth();
+  const { user, confirmFarmLocation, updateUserLocation } = useAuth();
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
     products: "0",
@@ -37,22 +38,9 @@ const SellerDashboard = ({ navigation }) => {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [accessBlocked, setAccessBlocked] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (user?.id) {
-        fetchDashboardData();
-      }
-    }, [user?.id])
-  );
-
-  useEffect(() => {
-    if (user?.id) {
-      initLocation();
-    }
-  }, [user?.id]);
-
-  const initLocation = async () => {
+  const initLocation = useCallback(async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
@@ -65,14 +53,21 @@ const SellerDashboard = ({ navigation }) => {
           accuracy: location.coords.accuracy,
         });
       }
-    } catch (error) {
-      console.warn("SellerDashboard initLocation failed:", error);
+    } catch (_error) {
+      console.warn("SellerDashboard initLocation failed:", _error);
     }
-  };
+  }, [updateUserLocation]);
 
-  const fetchDashboardData = async () => {
-    if (!user?.id || user?.role !== "seller") {
-      setErrorMessage("Please sign in again to load your seller dashboard.");
+  const fetchDashboardData = useCallback(async () => {
+    if (accessBlocked) {
+      return;
+    }
+
+    if (!user?.id || !isSellerRole(user?.role)) {
+      const message = "Seller access is unavailable for this account.";
+      setAccessBlocked(true);
+      setErrorMessage(message);
+      announceMessage(message);
       return;
     }
 
@@ -97,27 +92,40 @@ const SellerDashboard = ({ navigation }) => {
       setProducts(productsData || []);
       setOrders(ordersData || []);
       setErrorMessage("");
-    } catch (error) {
-      console.error("Failed to fetch seller dashboard data:", error);
-      const message = (error?.message || "Could not load dashboard details. Pull down to retry.")
+    } catch (_error) {
+      console.error("Failed to fetch seller dashboard data:", _error);
+      if (isCustomerAccessForbiddenError(_error)) {
+        const message = "This account is a customer account. Seller dashboard is unavailable.";
+        setAccessBlocked(true);
+        setErrorMessage(message);
+        announceMessage(message);
+        return;
+      }
+      const message = (_error?.message || "Could not load dashboard details. Pull down to retry.")
         .replace(/^\[[^\]]+\]\s*/, "");
       setErrorMessage(message);
       announceMessage("Could not load dashboard details. Use retry to try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessBlocked, user?.id, user?.role]);
+
+  useEffect(() => {
+    if (user?.id) {
+      initLocation();
+    }
+  }, [initLocation, user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id && !accessBlocked) {
+        fetchDashboardData();
+      }
+    }, [accessBlocked, fetchDashboardData, user?.id])
+  );
 
   const handleAddProduct = () => {
     navigation.navigate("AddProduct");
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Login" }],
-    });
   };
 
   const handleSetFarmLocation = () => {
@@ -155,8 +163,8 @@ const SellerDashboard = ({ navigation }) => {
               
               await confirmFarmLocation(locationToUse);
               Alert.alert("Success", "Farm location set. Your products are now visible to nearby buyers!");
-            } catch (error) {
-              Alert.alert("Location Error", error.message || "Could not set farm location. Try again with a better signal.");
+            } catch (_error) {
+              Alert.alert("Location Error", _error.message || "Could not set farm location. Try again with a better signal.");
             } finally {
               setLoading(false);
             }

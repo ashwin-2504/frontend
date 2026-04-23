@@ -82,11 +82,37 @@ const CheckoutScreen = ({ route, navigation }) => {
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchAddresses();
+      const loadAddresses = async () => {
+        try {
+          const data = await apiService.getAddresses();
+          const addressData = Array.isArray(data) ? data : data.data || [];
+          setAddresses(addressData);
+
+          const savedAddressId = await AsyncStorage.getItem(CHECKOUT_ADDRESS_KEY);
+
+          if (addressData.length > 0) {
+            let target = addressData.find(a => a.id === savedAddressId);
+            if (!target) {
+              target = addressData.find(a => a.isDefault) || addressData[0];
+            }
+
+            setSelectedAddress(target);
+            setShippingInfo(prev => ({
+              ...prev,
+              address: target.fullAddress,
+              pincode: target.pincode,
+            }));
+          }
+        } catch (_error) {
+          console.warn("Failed to fetch addresses:", _error);
+        }
+      };
+
+      loadAddresses();
 
       // Implement Back Guard
       const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-        if (loading || paymentLoading || initialItems.length === 0) return;
+        if (loading || paymentLoading || checkoutItems.length === 0) return;
 
         e.preventDefault();
 
@@ -105,34 +131,8 @@ const CheckoutScreen = ({ route, navigation }) => {
       });
 
       return () => unsubscribe();
-    }, [navigation, loading, paymentLoading, checkoutItems.length])
+    }, [navigation, loading, paymentLoading, checkoutItems.length, CHECKOUT_ADDRESS_KEY])
   );
-
-  const fetchAddresses = async () => {
-    try {
-      const data = await apiService.getAddresses();
-      const addressData = Array.isArray(data) ? data : data.data || [];
-      setAddresses(addressData);
-      
-      const savedAddressId = await AsyncStorage.getItem(CHECKOUT_ADDRESS_KEY);
-      
-      if (addressData.length > 0) {
-        let target = addressData.find(a => a.id === savedAddressId);
-        if (!target) {
-            target = addressData.find(a => a.isDefault) || addressData[0];
-        }
-        
-        setSelectedAddress(target);
-        setShippingInfo(prev => ({
-          ...prev,
-          address: target.fullAddress,
-          pincode: target.pincode,
-        }));
-      }
-    } catch (error) {
-      console.warn("Failed to fetch addresses:", error);
-    }
-  };
 
   const handleSelectAddress = async (addr) => {
     setSelectedAddress(addr);
@@ -181,7 +181,7 @@ const CheckoutScreen = ({ route, navigation }) => {
 
   const [checkoutPhase, setCheckoutPhase] = useState("READY"); // READY | INITIATING | PAYING | CONFIRMING | SUCCESS | FAILED
   const [activeOrderId, setActiveOrderId] = useState(null);
-  const [idempotencyKey, setIdempotencyKey] = useState(`order_${Date.now()}_${user?.id}`);
+  const [idempotencyKey] = useState(`order_${Date.now()}_${user?.id}`);
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [recoverableOrder, setRecoverableOrder] = useState(null);
   const [razorpayOrderId, setRazorpayOrderId] = useState(null);
@@ -289,7 +289,7 @@ const CheckoutScreen = ({ route, navigation }) => {
 
       // If we are here and have no providerOrderId, it might be a Resume or Mock
       if (!paymentVerified && !razorpayOrderId) {
-           const mockRes = await processMockPayment();
+           await processMockPayment();
            setPaymentVerified(true);
            // After mock payment, we continue to confirm
            handleConfirmPhase(currentOrder.orderId, pId);

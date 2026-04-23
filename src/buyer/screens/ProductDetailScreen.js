@@ -7,7 +7,6 @@ import StyledText from "../../shared/components/StyledText";
 import { useCart } from "../../shared/context/CartContext";
 import { TopBar } from "../../shared/components/ScreenActions";
 import { announceMessage } from "../../shared/utils/accessibility";
-import ErrorBanner from "../../shared/components/ErrorBanner";
 import { useAuth } from "../../shared/context/AuthContext";
 import { formatFreshness } from "../../shared/utils/formatters";
 

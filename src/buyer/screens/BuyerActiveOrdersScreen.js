@@ -2,9 +2,7 @@ import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
-import { Feather } from "@expo/vector-icons";
 import { theme } from "../../shared/theme/theme";
-import StyledText from "../../shared/components/StyledText";
 import { useAuth } from "../../shared/context/AuthContext";
 import apiService from "../../shared/services/apiService";
 import OrderItem from "../../seller/components/OrderItem";
@@ -12,20 +10,21 @@ import { TopBar } from "../../shared/components/ScreenActions";
 import ErrorBanner from "../../shared/components/ErrorBanner";
 import { announceMessage } from "../../shared/utils/accessibility";
 import EmptyState from "../../shared/components/EmptyState";
+import { isSessionAuthError } from "../../shared/utils/authErrors";
 
 
 
 const ACTIVE_STATUSES = new Set(["PENDING", "PLACED", "CONFIRMED", "SHIPPED"]);
 
 const BuyerActiveOrdersScreen = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const activeOrders = orders.filter((order) => ACTIVE_STATUSES.has(order.status));
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     if (!user?.id) {
       const message = "Please sign in again to load your active orders.";
       setErrorMessage(message);
@@ -39,21 +38,33 @@ const BuyerActiveOrdersScreen = ({ navigation }) => {
       const data = await apiService.getBuyerOrders(buyerId);
       setOrders(Array.isArray(data) ? data : []);
       setErrorMessage("");
-    } catch (error) {
+    } catch (_error) {
+      const isAuthErr = isSessionAuthError(_error) || String(_error?.message || _error).includes("Sign in again");
+      if (isAuthErr) {
+        const message = "Your session expired. Signing you out.";
+        setErrorMessage(message);
+        announceMessage(message);
+        await logout().catch(() => null);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Login" }],
+        });
+        return;
+      }
       const message = "Could not load active orders. Please try again.";
       setErrorMessage(message);
       announceMessage(message);
     } finally {
       setLoading(false);
     }
-  };
+    }, [user?.id, logout, navigation]);
 
   useFocusEffect(
     useCallback(() => {
       if (user?.id) {
         fetchOrders();
       }
-    }, [user?.id])
+    }, [fetchOrders, user?.id])
   );
 
   return (

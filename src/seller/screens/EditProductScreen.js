@@ -2,10 +2,8 @@ import React, { useState } from "react";
 import {
   View,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -25,6 +23,7 @@ import PrimaryButton from "../../shared/components/PrimaryButton";
 import { announceMessage } from "../../shared/utils/accessibility";
 import ErrorBanner from "../../shared/components/ErrorBanner";
 import CustomInput from "../../shared/components/CustomInput";
+import { isCustomerAccessForbiddenError, isSellerRole } from "../../shared/utils/roleUtils";
 
 const EditProductScreen = ({ route, navigation }) => {
   const { product } = route.params;
@@ -117,8 +116,8 @@ const EditProductScreen = ({ route, navigation }) => {
       return;
     }
 
-    if (!user?.id || user?.role !== "seller") {
-      const message = "Only a signed-in farmer can edit products.";
+    if (!user?.id || !isSellerRole(user?.role)) {
+      const message = "Only a signed-in seller can edit products.";
       setErrorMessage(message);
       announceMessage(message);
       Alert.alert("Access denied", message);
@@ -188,6 +187,13 @@ const EditProductScreen = ({ route, navigation }) => {
       ]);
     } catch (error) {
       console.error("Failed to update product:", error);
+      if (isCustomerAccessForbiddenError(error)) {
+        const message = "This account is a customer account. Seller product editing is unavailable.";
+        setErrorMessage(message);
+        announceMessage(message);
+        Alert.alert("Access denied", message);
+        return;
+      }
       const message = "Could not update product. Please retry.";
       setErrorMessage(message);
       announceMessage(message);
@@ -207,8 +213,8 @@ const EditProductScreen = ({ route, navigation }) => {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (!user?.id || user?.role !== "seller") {
-              const message = "Only a signed-in farmer can delete products.";
+            if (!user?.id || !isSellerRole(user?.role)) {
+              const message = "Only a signed-in seller can delete products.";
               setErrorMessage(message);
               announceMessage(message);
               Alert.alert("Access denied", message);
@@ -224,6 +230,13 @@ const EditProductScreen = ({ route, navigation }) => {
               ]);
             } catch (error) {
               console.error("Failed to delete product:", error);
+              if (isCustomerAccessForbiddenError(error)) {
+                const message = "This account is a customer account. Seller product deletion is unavailable.";
+                setErrorMessage(message);
+                announceMessage(message);
+                Alert.alert("Access denied", message);
+                return;
+              }
               announceMessage("Could not delete product");
               Alert.alert("Error", "Failed to delete product.");
             } finally {

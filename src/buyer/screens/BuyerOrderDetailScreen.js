@@ -37,7 +37,7 @@ const BuyerOrderDetailScreen = ({ route, navigation }) => {
               await apiService.cancelOrder(order.orderId);
               setOrder({ ...order, status: "CANCELLED" });
               Alert.alert("Cancelled", "Order has been cancelled successfully.");
-            } catch (error) {
+            } catch {
               Alert.alert("Error", "Failed to cancel order. Please try again.");
             } finally {
               setLoading(false);
@@ -56,11 +56,6 @@ const BuyerOrderDetailScreen = ({ route, navigation }) => {
   const getStatusBg = (status) => {
     const sc = theme.STATUS_COLORS[status];
     return sc ? sc.bg : theme.COLORS.background;
-  };
-
-  const getStatusIcon = (status) => {
-    const sc = theme.STATUS_COLORS[status];
-    return sc ? sc.icon : "circle";
   };
 
   const orderItems = Array.isArray(order.items) ? order.items : [];

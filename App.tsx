@@ -9,10 +9,11 @@ import { CartProvider } from "./src/shared/context/CartContext";
 import { AuthProvider, useAuth } from "./src/shared/context/AuthContext";
 import { COLORS } from "./src/shared/theme/theme";
 
-Text.defaultProps = Text.defaultProps || {};
-Text.defaultProps.allowFontScaling = true;
-TextInput.defaultProps = TextInput.defaultProps || {};
-TextInput.defaultProps.allowFontScaling = true;
+// Expo/React Native types do not expose defaultProps here, but the runtime supports it.
+(Text as any).defaultProps = (Text as any).defaultProps || {};
+(Text as any).defaultProps.allowFontScaling = true;
+(TextInput as any).defaultProps = (TextInput as any).defaultProps || {};
+(TextInput as any).defaultProps.allowFontScaling = true;
 
 export default function App() {
   return (

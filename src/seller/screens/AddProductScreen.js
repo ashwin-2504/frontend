@@ -2,10 +2,8 @@ import React, { useState } from "react";
 import {
   View,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -24,6 +22,7 @@ import { TopBar, BottomNextBar } from "../../shared/components/ScreenActions";
 import { announceMessage } from "../../shared/utils/accessibility";
 import ErrorBanner from "../../shared/components/ErrorBanner";
 import CustomInput from "../../shared/components/CustomInput";
+import { isCustomerAccessForbiddenError, isSellerRole } from "../../shared/utils/roleUtils";
 
 const AddProductScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -115,8 +114,8 @@ const AddProductScreen = ({ navigation }) => {
       return;
     }
 
-    if (!user?.id || user?.role !== "seller") {
-      const message = "Only a signed-in farmer can add products.";
+    if (!user?.id || !isSellerRole(user?.role)) {
+      const message = "Only a signed-in seller can add products.";
       setErrorMessage(message);
       announceMessage(message);
       Alert.alert("Access denied", message);
@@ -189,6 +188,13 @@ const AddProductScreen = ({ navigation }) => {
       ]);
     } catch (error) {
       console.error("Failed to add product:", error);
+      if (isCustomerAccessForbiddenError(error)) {
+        const message = "This account is a customer account. Seller product creation is unavailable.";
+        setErrorMessage(message);
+        announceMessage(message);
+        Alert.alert("Access denied", message);
+        return;
+      }
       const message = "Failed to add product. Please check details and retry.";
       setErrorMessage(message);
       announceMessage(message);

@@ -18,14 +18,12 @@ import OrderItem from "../../seller/components/OrderItem";
 import apiService from "../../shared/services/apiService";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "../../shared/context/AuthContext";
-import { useCart } from "../../shared/context/CartContext";
 import { TopBar } from "../../shared/components/ScreenActions";
 import { announceMessage } from "../../shared/utils/accessibility";
-import ErrorBanner from "../../shared/components/ErrorBanner";
+import { isSessionAuthError } from "../../shared/utils/authErrors";
 
 const BuyerDashboard = ({ navigation }) => {
   const { user, logout } = useAuth();
-  const { cartCount } = useCart();
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
     purchases: "0",
@@ -36,15 +34,7 @@ const BuyerDashboard = ({ navigation }) => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [feed, setFeed] = useState([]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (user?.id) {
-        fetchDashboardData();
-      }
-    }, [user?.id])
-  );
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     if (!user?.id || user?.role !== "customer") {
       announceMessage("Please sign in again to load your buyer dashboard.");
       return;
@@ -67,25 +57,37 @@ const BuyerDashboard = ({ navigation }) => {
       });
       setRecentOrders(ordersData || []);
       setFeed(feedData || []);
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
+    } catch (_error) {
+      const isAuthErr = isSessionAuthError(_error) || String(_error?.message || _error).includes("Sign in again");
+      if (isAuthErr) {
+        const message = "Your session expired. Signing you out.";
+        setLoading(false);
+        announceMessage(message);
+        await logout().catch(() => null);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Login" }],
+        });
+        return;
+      }
+      console.error("Failed to fetch dashboard data:", _error);
       announceMessage("Could not load dashboard. Pull down to try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [logout, navigation, user?.id, user?.role]);
 
   const handleSearch = () => {
     navigation.navigate("Marketplace");
   };
 
-  const handleLogout = async () => {
-    await logout();
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Login" }],
-    });
-  };
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        fetchDashboardData();
+      }
+    }, [fetchDashboardData, user?.id])
+  );
 
   return (
     <SafeAreaView style={styles.container}>
