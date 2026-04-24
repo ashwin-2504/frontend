@@ -40,6 +40,9 @@ const SellerProductsScreen = ({ navigation }) => {
       setProducts(data);
       setErrorMessage("");
     } catch (_error) {
+      if (String(_error?.message || _error).includes("Sign in again")) {
+        return; // Silent catch, AuthContext handles redirect
+      }
       console.error("Failed to fetch seller products:", _error);
       if (isCustomerAccessForbiddenError(_error)) {
         const message = "This account is a customer account. Seller products are unavailable.";

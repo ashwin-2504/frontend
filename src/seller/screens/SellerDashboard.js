@@ -93,6 +93,9 @@ const SellerDashboard = ({ navigation }) => {
       setOrders(ordersData || []);
       setErrorMessage("");
     } catch (_error) {
+      if (String(_error?.message || _error).includes("Sign in again")) {
+        return; // Silent catch, AuthContext handles redirect
+      }
       console.error("Failed to fetch seller dashboard data:", _error);
       if (isCustomerAccessForbiddenError(_error)) {
         const message = "This account is a customer account. Seller dashboard is unavailable.";

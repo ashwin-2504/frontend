@@ -78,6 +78,15 @@ const normalizeAuthError = (context, error) => {
   return normalized;
 };
 
+
+const logApiError = (context, error) => {
+  if (error?.code?.startsWith('auth/') || String(error?.message || '').includes('Sign in again')) {
+    console.log('API Auth Note (' + context + '):', error.message);
+  } else {
+    console.error('API Error (' + context + '):', error);
+  }
+};
+
 const getIdToken = async () => {
   const currentUser = auth.currentUser;
   if (!currentUser) {
@@ -179,7 +188,7 @@ const apiService = {
       return await _handleResponse(response, "checkHealth");
     } catch (error) {
       const normalized = normalizeNetworkError("checkHealth", error);
-      console.error("API Error (checkHealth):", normalized);
+      logApiError("checkHealth", normalized);
       throw normalized;
     }
   },
@@ -201,7 +210,7 @@ const apiService = {
       return await _handleResponse(response, "syncUserProfile");
     } catch (error) {
       const normalized = normalizeNetworkError("syncUserProfile", error);
-      console.error("API Error (syncUserProfile):", normalized);
+      logApiError("syncUserProfile", normalized);
       throw normalized;
     }
   },
@@ -219,7 +228,7 @@ const apiService = {
       return await _handleResponse(response, "switchRole");
     } catch (error) {
       const normalized = normalizeNetworkError("switchRole", error);
-      console.error("API Error (switchRole):", normalized);
+      logApiError("switchRole", normalized);
       throw normalized;
     }
   },
@@ -275,7 +284,7 @@ const apiService = {
       return await _handleResponse(response, "initiateOrder");
     } catch (error) {
       const normalized = normalizeNetworkError("initiateOrder", error);
-      console.error("API Error (initiateOrder):", normalized);
+      logApiError("initiateOrder", normalized);
       throw normalized;
     }
   },
@@ -296,7 +305,7 @@ const apiService = {
       return await _handleResponse(response, "createIntent");
     } catch (error) {
       const normalized = normalizeNetworkError("createIntent", error);
-      console.error("API Error (createIntent):", normalized);
+      logApiError("createIntent", normalized);
       throw normalized;
     }
   },
@@ -317,7 +326,7 @@ const apiService = {
       return await _handleResponse(response, "confirmOrder");
     } catch (error) {
       const normalized = normalizeNetworkError("confirmOrder", error);
-      console.error("API Error (confirmOrder):", normalized);
+      logApiError("confirmOrder", normalized);
       throw normalized;
     }
   },
@@ -338,7 +347,7 @@ const apiService = {
       return await _handleResponse(response, "reportPaymentFailure");
     } catch (error) {
       const normalized = normalizeNetworkError("reportPaymentFailure", error);
-      console.error("API Error (reportPaymentFailure):", normalized);
+      logApiError("reportPaymentFailure", normalized);
       throw normalized;
     }
   },
@@ -360,7 +369,7 @@ const apiService = {
       return await _handleResponse(response, "addProduct");
     } catch (error) {
       const normalized = normalizeNetworkError("addProduct", error);
-      console.error("API Error (addProduct):", normalized);
+      logApiError("addProduct", normalized);
       throw normalized;
     }
   },
@@ -377,7 +386,7 @@ const apiService = {
       return await _handleResponse(response, "getSellerProducts");
     } catch (error) {
       const normalized = normalizeNetworkError("getSellerProducts", error);
-      console.error("API Error (getSellerProducts):", normalized);
+      logApiError("getSellerProducts", normalized);
       throw normalized;
     }
   },
@@ -433,7 +442,7 @@ const apiService = {
       return await _handleResponse(response, "getSellerOrders");
     } catch (error) {
       const normalized = normalizeNetworkError("getSellerOrders", error);
-      console.error("API Error (getSellerOrders):", normalized);
+      logApiError("getSellerOrders", normalized);
       throw normalized;
     }
   },
@@ -450,7 +459,7 @@ const apiService = {
       return await _handleResponse(response, "getBuyerOrders");
     } catch (error) {
       const normalized = normalizeNetworkError("getBuyerOrders", error);
-      console.error("API Error (getBuyerOrders):", normalized);
+      logApiError("getBuyerOrders", normalized);
       throw normalized;
     }
   },
@@ -467,7 +476,7 @@ const apiService = {
       return await _handleResponse(response, "getBuyerStats");
     } catch (error) {
       const normalized = normalizeNetworkError("getBuyerStats", error);
-      console.error("API Error (getBuyerStats):", normalized);
+      logApiError("getBuyerStats", normalized);
       throw normalized;
     }
   },
@@ -484,7 +493,7 @@ const apiService = {
       return await _handleResponse(response, "getSellerStats");
     } catch (error) {
       const normalized = normalizeNetworkError("getSellerStats", error);
-      console.error("API Error (getSellerStats):", normalized);
+      logApiError("getSellerStats", normalized);
       throw normalized;
     }
   },
@@ -505,7 +514,7 @@ const apiService = {
       return await _handleResponse(response, "updateOrderStatus");
     } catch (error) {
       const normalized = normalizeNetworkError("updateOrderStatus", error);
-      console.error("API Error (updateOrderStatus):", normalized);
+      logApiError("updateOrderStatus", normalized);
       throw normalized;
     }
   },
@@ -523,7 +532,7 @@ const apiService = {
       return await _handleResponse(response, "cancelOrder");
     } catch (error) {
       const normalized = normalizeNetworkError("cancelOrder", error);
-      console.error("API Error (cancelOrder):", normalized);
+      logApiError("cancelOrder", normalized);
       throw normalized;
     }
   },
@@ -545,7 +554,7 @@ const apiService = {
       return await _handleResponse(response, "updateProduct");
     } catch (error) {
       const normalized = normalizeNetworkError("updateProduct", error);
-      console.error("API Error (updateProduct):", normalized);
+      logApiError("updateProduct", normalized);
       throw normalized;
     }
   },
@@ -563,7 +572,7 @@ const apiService = {
       return await _handleResponse(response, "deleteProduct");
     } catch (error) {
       const normalized = normalizeNetworkError("deleteProduct", error);
-      console.error("API Error (deleteProduct):", normalized);
+      logApiError("deleteProduct", normalized);
       throw normalized;
     }
   },
@@ -584,7 +593,7 @@ const apiService = {
       return await _handleResponse(response, "updateFarmLocation");
     } catch (error) {
       const normalized = normalizeNetworkError("updateFarmLocation", error);
-      console.error("API Error (updateFarmLocation):", normalized);
+      logApiError("updateFarmLocation", normalized);
       throw normalized;
     }
   },
@@ -598,7 +607,7 @@ const apiService = {
       return await _handleResponse(response, "getAddresses");
     } catch (error) {
       const normalized = normalizeNetworkError("getAddresses", error);
-      console.error("API Error (getAddresses):", normalized);
+      logApiError("getAddresses", normalized);
       throw normalized;
     }
   },
@@ -619,7 +628,7 @@ const apiService = {
       return await _handleResponse(response, "addAddress");
     } catch (error) {
       const normalized = normalizeNetworkError("addAddress", error);
-      console.error("API Error (addAddress):", normalized);
+      logApiError("addAddress", normalized);
       throw normalized;
     }
   },
@@ -640,7 +649,7 @@ const apiService = {
       return await _handleResponse(response, "updateAddress");
     } catch (error) {
       const normalized = normalizeNetworkError("updateAddress", error);
-      console.error("API Error (updateAddress):", normalized);
+      logApiError("updateAddress", normalized);
       throw normalized;
     }
   },
@@ -658,7 +667,7 @@ const apiService = {
       return await _handleResponse(response, "deleteAddress");
     } catch (error) {
       const normalized = normalizeNetworkError("deleteAddress", error);
-      console.error("API Error (deleteAddress):", normalized);
+      logApiError("deleteAddress", normalized);
       throw normalized;
     }
   },
@@ -676,7 +685,7 @@ const apiService = {
       return await _handleResponse(response, "setDefaultAddress");
     } catch (error) {
       const normalized = normalizeNetworkError("setDefaultAddress", error);
-      console.error("API Error (setDefaultAddress):", normalized);
+      logApiError("setDefaultAddress", normalized);
       throw normalized;
     }
   },
