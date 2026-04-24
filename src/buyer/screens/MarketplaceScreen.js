@@ -62,13 +62,16 @@ const MarketplaceScreen = ({ navigation }) => {
       console.warn("Location permission or fetch failed:", _error);
     } finally {
       setLocationLoading(false);
-      fetchAllProducts(locationData || user?.lastKnownLocation);
+      // We pass the new locationData to fetchAllProducts; if it's null, fetchAllProducts will use the context's location
+      fetchAllProducts(locationData || undefined);
     }
-  }, [fetchAllProducts, updateUserLocation, user?.lastKnownLocation]);
+  }, [fetchAllProducts, updateUserLocation]);
 
   useEffect(() => {
+    // Only run once on mount
     initMarketplace();
-  }, [initMarketplace]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {

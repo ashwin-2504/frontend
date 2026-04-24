@@ -117,7 +117,8 @@ const SellerDashboard = ({ navigation }) => {
     if (user?.id) {
       initLocation();
     }
-  }, [initLocation, user?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   useFocusEffect(
     useCallback(() => {
