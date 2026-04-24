@@ -1,16 +1,31 @@
 import React from "react";
 import { View, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import StyledText from "./StyledText";
 import { theme } from "../theme/theme";
 
-export const TopBar = ({ title, onBack, backLabel = "Back", backHint = "Go to previous screen", rightNode }) => {
+export const TopBar = ({ title, onBack, showBack, backLabel = "Back", backHint = "Go to previous screen", rightNode }) => {
+  const navigation = useNavigation();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.reset({ index: 0, routes: [{ name: "MainTabs" }] });
+    }
+  };
+
+  const hasBack = Boolean(onBack || showBack);
+
   return (
     <View style={styles.header}>
-      {onBack ? (
+      {hasBack ? (
         <Pressable
           style={styles.backButton}
-          onPress={onBack}
+          onPress={handleBack}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
           accessibilityLabel={backLabel}
